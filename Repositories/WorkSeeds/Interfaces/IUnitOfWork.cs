@@ -6,5 +6,6 @@ namespace Repositories.WorkSeeds.Interfaces
     public interface IUnitOfWork : IGenericUnitOfWork
     {
         IUserRepository UserRepository { get; }
+        ICustomerRepository CustomerRepository { get; }
     }
 }

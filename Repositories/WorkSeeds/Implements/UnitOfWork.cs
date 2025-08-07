@@ -13,6 +13,7 @@ namespace Repositories.WorkSeeds.Implements
         private ILogger<UnitOfWork> _logger;
         // Specific repositories
         private IUserRepository? _userRepository;
+        private ICustomerRepository? _customerRepository;
         public UnitOfWork(EXE_BE context, IRepositoryFactory repositoryFactory, ILogger<UnitOfWork> logger)
         {
             _context = context;
@@ -22,6 +23,9 @@ namespace Repositories.WorkSeeds.Implements
 
         public IUserRepository UserRepository =>
             _userRepository ??= _repositoryFactory.GetCustomRepository<IUserRepository>();
+
+        public ICustomerRepository CustomerRepository => 
+            _customerRepository ??= _repositoryFactory.GetCustomRepository<ICustomerRepository>();
         public IGenericRepository<TEntity, TKey> GetRepository<TEntity, TKey>()
             where TEntity : class
         {

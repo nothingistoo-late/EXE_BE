@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Repositories.Implementations;
+using Repositories.Implements;
 using Repositories.Interfaces;
+using Services.Helpers.Mappers;
 using System.Text;
 
 
@@ -93,13 +95,16 @@ namespace WebAPI.Extensions
             services.AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>));
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IRepositoryFactory, RepositoryFactory>();
+            services.AddScoped<ICustomerRepository, CustomerRepository>();
+            services.AddScoped<ICurrentTime, CurrentTime>();
 
 
             services.AddScoped<ICurrentUserService, CurrentUserService>();
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IUserEmailService, UserEmailService>();
-
+            services.AddScoped<ICustomerService, CustomerService>();
+            services.AddScoped<IEmailService, EmailService>();
 
             // 5. Email + Quartz
             services.AddEmailServices(options =>
@@ -110,6 +115,9 @@ namespace WebAPI.Extensions
 
             // 6. Controllers
             services.AddControllers();
+
+            // 7. Mapper
+            services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
             return services;
         }

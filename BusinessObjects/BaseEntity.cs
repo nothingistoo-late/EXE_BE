@@ -2,6 +2,8 @@
 {
     public abstract class BaseEntity
     {
+        public string? Note { get; set; } 
+        public string? ImgURL { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public Guid CreatedBy { get; set; }
         public DateTime UpdatedAt { get; set; }

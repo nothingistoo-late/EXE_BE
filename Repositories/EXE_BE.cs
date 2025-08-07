@@ -10,6 +10,10 @@ namespace Repositories
         public EXE_BE(DbContextOptions<EXE_BE> options) : base(options)
         {
         }
+
+        public DbSet<User> Users { get; set; }
+        public DbSet<Staff> Staffs { get; set; }
+        public DbSet<Customer> Customers { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

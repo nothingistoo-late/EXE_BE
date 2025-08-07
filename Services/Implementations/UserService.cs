@@ -274,8 +274,8 @@ namespace Services.Implementations
             }
 
             // 4. Verify account state
-            if (!await _userManager.IsEmailConfirmedAsync(user))
-                return ApiResult<UserResponse>.Failure(new InvalidOperationException("Please confirm your email before logging in"));
+            //if (!await _userManager.IsEmailConfirmedAsync(user))
+            //    return ApiResult<UserResponse>.Failure(new InvalidOperationException("Please confirm your email before logging in"));
 
             if (await _userManager.IsLockedOutAsync(user))
                 return ApiResult<UserResponse>.Failure(new InvalidOperationException("Account is locked"));
