@@ -65,5 +65,14 @@ namespace API.Controllers
             var result = await _orderService.CancelledOrderAsync(id);
             return result.IsSuccess ? Ok(result) : BadRequest(result);
         }
+        /// <summary>
+        /// Batch update order status
+        /// </summary>
+        [HttpPut("status")]
+        public async Task<IActionResult> UpdateOrderStatus([FromBody] UpdateOrderStatusRequest request)
+        {
+            var result = await _orderService.UpdateOrderStatusAsync(request.OrderIds, request.Status);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
     }
 }

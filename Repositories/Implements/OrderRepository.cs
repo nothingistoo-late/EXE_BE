@@ -18,7 +18,6 @@ namespace Repositories.Implements
             return await _context.Set<Order>()
                 .Include(o => o.OrderDetails)
                     .ThenInclude(d => d.BoxType)
-                .Include(o => o.Discount)
                 .SingleOrDefaultAsync(o => o.Id == id);
         }
 
@@ -28,7 +27,6 @@ namespace Repositories.Implements
                 .Where(o => o.UserId == customerId)
                 .Include(o => o.OrderDetails)
                     .ThenInclude(d => d.BoxType)
-                .Include(o => o.Discount)
                 .ToListAsync();
         }
 

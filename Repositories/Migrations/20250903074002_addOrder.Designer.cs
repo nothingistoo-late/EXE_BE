@@ -12,7 +12,7 @@ using Repositories;
 namespace Repositories.Migrations
 {
     [DbContext(typeof(EXE_BE))]
-    [Migration("20250903055821_addOrder")]
+    [Migration("20250903074002_addOrder")]
     partial class addOrder
     {
         /// <inheritdoc />
@@ -207,13 +207,16 @@ namespace Repositories.Migrations
                     b.Property<int>("DeliveryMethod")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("DiscountId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("DiscountCode")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<double>("FinalPrice")
                         .HasColumnType("float");
 
                     b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPaid")
                         .HasColumnType("bit");
 
                     b.Property<int>("PaymentMethod")
@@ -235,8 +238,6 @@ namespace Repositories.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("DiscountId");
 
                     b.ToTable("Orders");
                 });
@@ -639,15 +640,6 @@ namespace Repositories.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("BusinessObjects.Order", b =>
-                {
-                    b.HasOne("BusinessObjects.Discount", "Discount")
-                        .WithMany()
-                        .HasForeignKey("DiscountId");
-
-                    b.Navigation("Discount");
                 });
 
             modelBuilder.Entity("BusinessObjects.OrderDetail", b =>

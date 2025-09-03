@@ -92,7 +92,6 @@ namespace Services.Helpers.Mappers
             // Map Order -> OrderResponse
             CreateMap<Order, OrderResponse>()
                 .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId)) // giả sử Order có CustomerId
-                .ForMember(dest => dest.DiscountCode, opt => opt.MapFrom(src => src.Discount != null ? src.Discount.Code : null))
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
                 .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.OrderDetails));
 

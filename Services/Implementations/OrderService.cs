@@ -63,17 +63,16 @@ namespace Services.Implementations
                 // Tính giá gốc
                 order.TotalPrice = order.OrderDetails.Sum(d => d.UnitPrice * d.Quantity);
                 order.FinalPrice = order.TotalPrice;
-
                 // Check discount (nếu có)
                 if (!string.IsNullOrWhiteSpace(request.DiscountCode))
                 {
+                    order.DiscountCode = request.DiscountCode;
                     var discount = await _unitOfWork.DiscountRepository
                         .FirstOrDefaultAsync(d => d.Code == request.DiscountCode && d.IsActive);
 
                     if (discount == null)
                         return ApiResult<OrderResponse>.Failure(new Exception("Invalid or inactive discount code."));
 
-                    order.DiscountId = discount.Id;
                     order.FinalPrice = discount.IsPercentage
                         ? order.TotalPrice * (1 - discount.DiscountValue / 100)
                         : order.TotalPrice - discount.DiscountValue;
@@ -120,6 +119,10 @@ namespace Services.Implementations
         {
             try
             {
+                var user = await _unitOfWork.UserRepository.GetByIdAsync(customerId);
+                if (user == null)
+                    return ApiResult<List<OrderResponse>>.Failure(new Exception("Không tìm thấy khách hàng này : " + customerId));
+
                 var orders = await _unitOfWork.OrderRepository.GetAllOrdersByCustomerIdAsync(customerId);
 
                 if (orders == null || orders.Count == 0)
@@ -139,7 +142,7 @@ namespace Services.Implementations
         {
             try
             {
-                var orders = await _unitOfWork.OrderRepository.GetAllAsync();
+                var orders = await _unitOfWork.OrderRepository.GetAllAsync(null, includes: o=> o.OrderDetails);
 
                 if (orders == null || orders.Count == 0)
                     return ApiResult<List<OrderResponse>>.Failure(new Exception("Không tìm thấy đơn hàng nào!!"));
@@ -238,5 +241,60 @@ namespace Services.Implementations
                 return ApiResult<OrderResponse>.Failure(ex);
             }
         }
+
+        public async Task<ApiResult<List<UpdateOrderStatusResult>>> UpdateOrderStatusAsync(List<Guid> guids, OrderStatus status)
+        {
+            var results = new List<UpdateOrderStatusResult>();
+
+            try
+            {
+                foreach (var id in guids)
+                {
+                    var order = await _unitOfWork.OrderRepository.GetByIdAsync(id);
+                    if (order == null)
+                    {
+                        results.Add(new UpdateOrderStatusResult
+                        {
+                            OrderId = id,
+                            IsSuccess = false,
+                            Message = "Order not found."
+                        });
+                        continue;
+                    }
+
+                    try
+                    {
+                        order.Status = status;
+                        order.UpdatedAt = DateTime.UtcNow;
+                        await _unitOfWork.OrderRepository.UpdateAsync(order);
+
+                        results.Add(new UpdateOrderStatusResult
+                        {
+                            OrderId = id,
+                            IsSuccess = true,
+                            Message = "Updated successfully.",
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        results.Add(new UpdateOrderStatusResult
+                        {
+                            OrderId = id,
+                            IsSuccess = false,
+                            Message = ex.Message
+                        });
+                    }
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                return ApiResult<List<UpdateOrderStatusResult>>.Success(results, "Batch update completed.");
+            }
+            catch (Exception ex)
+            {
+                return ApiResult<List<UpdateOrderStatusResult>>.Failure(ex);
+            }
+        }
+
+
     }
 }

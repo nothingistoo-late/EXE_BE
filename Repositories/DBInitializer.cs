@@ -22,7 +22,6 @@ namespace Repositories
                 await context.SaveChangesAsync();
             }
             #endregion
-
             #region Seed Users
             if (!context.Users.Any())
             {
@@ -112,8 +111,72 @@ namespace Repositories
                 await context.SaveChangesAsync();
             }
             #endregion
+            #region Seed Discounts
+            if (!context.Discounts.Any())
+            {
+                var discounts = new List<Discount>
+                {
+                    new Discount
+                    {
+                        Id = Guid.NewGuid(),
+                        Code = "SALE20",
+                        Description = "Giảm 20% cho tất cả đơn hàng trên 500k",
+                        DiscountValue = 20,
+                        IsPercentage = true,
+                        StartDate = new DateTime(2025, 9, 1),
+                        EndDate = new DateTime(2025, 10, 1),
+                        IsActive = true
+                    },
+                    new Discount
+                    {
+                        Id = Guid.NewGuid(),
+                        Code = "FREESHIP50",
+                        Description = "Giảm 50k phí ship cho đơn từ 300k",
+                        DiscountValue = 50000,
+                        IsPercentage = false,
+                        StartDate = new DateTime(2025, 9, 1),
+                        EndDate = new DateTime(2025, 11, 1),
+                        IsActive = true
+                    },
+                    new Discount
+                    {
+                        Id = Guid.NewGuid(),
+                        Code = "WELCOME10",
+                        Description = "Giảm 10% cho khách hàng mới",
+                        DiscountValue = 10,
+                        IsPercentage = true,
+                        StartDate = new DateTime(2025, 9, 1),
+                        EndDate = new DateTime(2025, 12, 1),
+                        IsActive = true
+                    },
+                    new Discount
+                    {
+                        Id = Guid.NewGuid(),
+                        Code = "BLACKFRIDAY",
+                        Description = "Giảm 200k cho đơn từ 1 triệu",
+                        DiscountValue = 200000,
+                        IsPercentage = false,
+                        StartDate = new DateTime(2025, 11, 25),
+                        EndDate = new DateTime(2025, 11, 30),
+                        IsActive = true
+                    },
+                    new Discount
+                    {
+                        Id = Guid.NewGuid(),
+                        Code = "VIP30",
+                        Description = "Giảm 30% cho khách hàng VIP",
+                        DiscountValue = 30,
+                        IsPercentage = true,
+                        StartDate = new DateTime(2025, 9, 1),
+                        EndDate = new DateTime(2026, 9, 1),
+                        IsActive = true
+                    }
+                };
 
-
+                await context.Discounts.AddRangeAsync(discounts);
+                await context.SaveChangesAsync();
+            }
+            #endregion
 
             // Cập nhật SecurityStamp cho các user nếu chưa có
             var allUsers = await context.Users.ToListAsync();
