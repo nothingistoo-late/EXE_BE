@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using DTOs;
 using DTOs.Customer.Responds;
+using DTOs.OrderDTOs.Respond;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -88,6 +89,16 @@ namespace Services.Helpers.Mappers
             //;
             //CreateMap<Rating, RatingDTO>().ReverseMap();
 
+            // Map Order -> OrderResponse
+            CreateMap<Order, OrderResponse>()
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId)) // giả sử Order có CustomerId
+                .ForMember(dest => dest.DiscountCode, opt => opt.MapFrom(src => src.Discount != null ? src.Discount.Code : null))
+                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+                .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.OrderDetails));
+
+            // Map OrderDetail -> OrderDetailResponse
+            CreateMap<OrderDetail, OrderDetailResponse>()
+                .ForMember(dest => dest.BoxName, opt => opt.MapFrom(src => src.BoxType != null ? src.BoxType.Name : string.Empty));
 
         }
     }

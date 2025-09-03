@@ -14,6 +14,7 @@ namespace BusinessObjects
         public Guid UserId { get; set; }
         public virtual User User { get; set; } = null!;
         public string Address { get; set; } = null!;
+        public string? ImgURL { get; set; } = null!;
 
     }
 }

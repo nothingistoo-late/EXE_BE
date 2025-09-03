@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
+using Repositories.Implements;
 using System.Data;
 
 namespace Repositories.WorkSeeds.Implements
@@ -14,6 +15,9 @@ namespace Repositories.WorkSeeds.Implements
         // Specific repositories
         private IUserRepository? _userRepository;
         private ICustomerRepository? _customerRepository;
+        private IBoxTypeRepository? _boxTypesRepository;
+        private IDiscountRepository? _discountRepository;
+        private IOrderRepository? _orderRepository;
         public UnitOfWork(EXE_BE context, IRepositoryFactory repositoryFactory, ILogger<UnitOfWork> logger)
         {
             _context = context;
@@ -26,6 +30,12 @@ namespace Repositories.WorkSeeds.Implements
 
         public ICustomerRepository CustomerRepository => 
             _customerRepository ??= _repositoryFactory.GetCustomRepository<ICustomerRepository>();
+        public IBoxTypeRepository BoxTypeRepository => 
+            _boxTypesRepository ??= _repositoryFactory.GetCustomRepository<IBoxTypeRepository>();
+        public IDiscountRepository DiscountRepository => 
+            _discountRepository ??= _repositoryFactory.GetCustomRepository<IDiscountRepository>();
+        public IOrderRepository OrderRepository => 
+            _orderRepository ??= _repositoryFactory.GetCustomRepository<IOrderRepository>();
         public IGenericRepository<TEntity, TKey> GetRepository<TEntity, TKey>()
             where TEntity : class
         {

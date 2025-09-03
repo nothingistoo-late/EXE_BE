@@ -7,5 +7,8 @@ namespace Repositories.WorkSeeds.Interfaces
     {
         IUserRepository UserRepository { get; }
         ICustomerRepository CustomerRepository { get; }
+        IBoxTypeRepository BoxTypeRepository { get; }
+        IDiscountRepository DiscountRepository { get; }
+        IOrderRepository OrderRepository { get; }
     }
 }

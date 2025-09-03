@@ -40,6 +40,80 @@ namespace Repositories
 
             }
             #endregion
+            #region Seed BoxTypes
+            if (!context.BoxTypes.Any())
+            {
+                var blindBoxId = Guid.NewGuid();
+                var customBoxId = Guid.NewGuid();
+                var detoxBoxId = Guid.NewGuid();
+                var giftBoxId = Guid.NewGuid();
+
+                var boxTypes = new List<BoxTypes>
+                {
+                    new BoxTypes
+                    {
+                        Id = blindBoxId,
+                        Name = "Blind Box",
+                        Description = "Random mystery box with surprise items",
+                        ParentID = Guid.Empty,
+                        Price = 150000 // 150k
+                    },
+                    new BoxTypes
+                    {
+                        Id = customBoxId,
+                        Name = "Custom Box",
+                        Description = "Customized box with user selected items",
+                        ParentID = Guid.Empty,
+                        Price = 0 // gốc, không bán trực tiếp
+                    },
+                    new BoxTypes
+                    {
+                        Id = detoxBoxId,
+                        Name = "Detox Box",
+                        Description = "Box designed for detox programs",
+                        ParentID = customBoxId,
+                        Price = 0 // gốc, không bán trực tiếp
+                    },
+                    new BoxTypes
+                    {
+                        Id = giftBoxId,
+                        Name = "Gift Box",
+                        Description = "Box designed for gifting purposes",
+                        ParentID = customBoxId,
+                        Price = 300000
+                    },
+                    new BoxTypes
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = "Detox Box A",
+                        Description = "Detox plan variant A",
+                        ParentID = detoxBoxId,
+                        Price = 200000
+                    },
+                    new BoxTypes
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = "Detox Box B",
+                        Description = "Detox plan variant B",
+                        ParentID = detoxBoxId,
+                        Price = 220000
+                    },
+                    new BoxTypes
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = "Detox Box C",
+                        Description = "Detox plan variant C",
+                        ParentID = detoxBoxId,
+                        Price = 250000
+                    }
+                };
+
+                await context.BoxTypes.AddRangeAsync(boxTypes);
+                await context.SaveChangesAsync();
+            }
+            #endregion
+
+
 
             // Cập nhật SecurityStamp cho các user nếu chưa có
             var allUsers = await context.Users.ToListAsync();
