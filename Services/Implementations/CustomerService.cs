@@ -85,11 +85,11 @@ namespace Services.Implementations
         {
             try
             {
-                var customer = await _repository.GetByIdAsync(Id,
-                    c => c.User
+                var customer = await _repository.FirstOrDefaultAsync(c => c.UserId == Id && !c.IsDeleted,
+                    includes : c => c.User
                 );
 
-                if (customer == null || customer.IsDeleted)
+                if (customer == null)
                 {
                     return ApiResult<CustomerRespondDTO>.Failure(new Exception("Không tìm thấy khách hàng!"));
                 }
@@ -164,7 +164,7 @@ namespace Services.Implementations
         {
             try
             {
-                var customer = await _repository.GetByIdAsync(customerId, c => c.User);
+                var customer = await _repository.FirstOrDefaultAsync(c => c.UserId  == customerId, c => c.User);
                 if (customer == null || customer.IsDeleted)
                     return ApiResult<CustomerRespondDTO>.Failure(new Exception("Không tìm thấy khách hàng để xóa!"));
 

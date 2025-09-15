@@ -13,6 +13,7 @@ namespace BusinessObjects
         public Guid UserId { get; set; }
         public OrderStatus Status { get; set; }
         public bool IsPaid { get; set; } = false;
+        public bool IsDelivered { get; set; } = false;
         public DeliveryMethod DeliveryMethod { get; set; }
         public PaymentMethod PaymentMethod { get; set; }
         public double TotalPrice { get; set; }

@@ -25,11 +25,11 @@ namespace Services.Implementations
             try
             {
                 if (request.Items == null || !request.Items.Any())
-                    return ApiResult<OrderResponse>.Failure(new Exception("Order must have at least one item."));
+                    return ApiResult<OrderResponse>.Failure(new Exception("Đơn đặt hàng phải có ít nhất 1 sản phẩm!!!"));
 
                 var userExists = await _unitOfWork.UserRepository.AnyAsync(u => u.Id == request.UserId);
                 if (!userExists)
-                    return ApiResult<OrderResponse>.Failure(new Exception("User not found."));
+                    return ApiResult<OrderResponse>.Failure(new Exception("Không tìm thấy người dùng với Id : ."+ request.UserId));
 
                 var order = new Order
                 {
@@ -44,11 +44,11 @@ namespace Services.Implementations
                 foreach (var item in request.Items)
                 {
                     if (item.Quantity <= 0)
-                        return ApiResult<OrderResponse>.Failure(new Exception($"Invalid quantity for BoxType {item.BoxTypeId}"));
+                        return ApiResult<OrderResponse>.Failure(new Exception($"Số lượng đặt hàng của Boxtype {item.BoxTypeId} không hợp lí, số lượng bạn đặt đang là : "+ item.Quantity));
 
                     var box = await _unitOfWork.BoxTypeRepository.GetByIdAsync(item.BoxTypeId);
                     if (box == null)
-                        return ApiResult<OrderResponse>.Failure(new Exception($"BoxType {item.BoxTypeId} not found."));
+                        return ApiResult<OrderResponse>.Failure(new Exception($"BoxType {item.BoxTypeId} không tìm thấy, xin kiểm tra và hãy thử lại!!"));
 
                     order.OrderDetails.Add(new OrderDetail
                     {
@@ -71,7 +71,7 @@ namespace Services.Implementations
                         .FirstOrDefaultAsync(d => d.Code == request.DiscountCode && d.IsActive);
 
                     if (discount == null)
-                        return ApiResult<OrderResponse>.Failure(new Exception("Invalid or inactive discount code."));
+                        return ApiResult<OrderResponse>.Failure(new Exception("Mã giảm giá không tồn tại hoặc đã hết hạn!!"));
 
                     order.FinalPrice = discount.IsPercentage
                         ? order.TotalPrice * (1 - discount.DiscountValue / 100)
@@ -87,7 +87,7 @@ namespace Services.Implementations
                 // Map sang DTO
                 var response = _mapper.Map<OrderResponse>(order);
 
-                return ApiResult<OrderResponse>.Success(response, "Order created successfully.");
+                return ApiResult<OrderResponse>.Success(response, "Tạo đơn hàng thành công!!.");
             }
             catch (Exception ex)
             {
@@ -157,80 +157,17 @@ namespace Services.Implementations
             }
         }
 
-
-        //public async Task<ApiResult<Order>> UpdateOrderAsync(Guid id, UpdateOrderRequest request)
-        //{
-        //    try
-        //    {
-        //        var order = await _context.Orders
-        //            .Include(o => o.OrderDetails)
-        //            .FirstOrDefaultAsync(o => o.Id == id);
-
-        //        if (order == null)
-        //            return ApiResult<Order>.Failure(new Exception("Order not found."));
-
-        //        order.Status = request.Status;
-        //        order.DeliveryMethod = request.DeliveryMethod;
-        //        order.PaymentMethod = request.PaymentMethod;
-
-        //        _context.OrderDetails.RemoveRange(order.OrderDetails);
-        //        order.OrderDetails.Clear();
-
-        //        foreach (var item in request.Items)
-        //        {
-        //            if (item.Quantity <= 0)
-        //                return ApiResult<Order>.Failure(new Exception($"Invalid quantity for BoxType {item.BoxTypeId}"));
-
-        //            var box = await _context.BoxTypes.FindAsync(item.BoxTypeId);
-        //            if (box == null)
-        //                return ApiResult<Order>.Failure(new Exception($"BoxType {item.BoxTypeId} not found."));
-
-        //            order.OrderDetails.Add(new OrderDetail
-        //            {
-        //                Id = Guid.NewGuid(),
-        //                OrderId = order.Id,
-        //                BoxTypeId = item.BoxTypeId,
-        //                Quantity = item.Quantity,
-        //                UnitPrice = box.Price
-        //            });
-        //        }
-
-        //        order.TotalPrice = order.OrderDetails.Sum(d => d.UnitPrice * d.Quantity);
-        //        order.FinalPrice = order.TotalPrice;
-
-        //        if (!string.IsNullOrEmpty(request.DiscountCode))
-        //        {
-        //            var discount = await _context.Discounts
-        //                .FirstOrDefaultAsync(d => d.Code == request.DiscountCode && d.IsActive);
-
-        //            if (discount == null)
-        //                return ApiResult<Order>.Failure(new Exception("Invalid or inactive discount code."));
-
-        //            order.DiscountId = discount.Id;
-        //            order.FinalPrice = discount.IsPercentage
-        //                ? order.TotalPrice * (1 - discount.DiscountValue / 100)
-        //                : order.TotalPrice - discount.DiscountValue;
-
-        //            if (order.FinalPrice < 0) order.FinalPrice = 0;
-        //        }
-
-        //        await _context.SaveChangesAsync();
-        //        return ApiResult<Order>.Success(order, "Order updated successfully.");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return ApiResult<Order>.Failure(ex);
-        //    }
-        //}
-
         public async Task<ApiResult<OrderResponse>> CancelledOrderAsync(Guid id)
         {
             try
             {
-                var order = await _unitOfWork.OrderRepository.GetByIdAsync(id);
+                var order = await _unitOfWork.OrderRepository.GetByIdAsync(id, includes: c=> c.OrderDetails);
                 if (order == null)
                     return ApiResult<OrderResponse>.Failure(new Exception("Không tìm thấy đơn hàng này: " + id));
-
+                if (order.Status == OrderStatus.Cancelled)
+                    return ApiResult<OrderResponse>.Failure(new Exception("Đơn hàng đã bị hủy trước đó rồi!!!"));
+                if (order.IsDelivered)
+                    return ApiResult<OrderResponse>.Failure(new Exception("Đơn hàng đã được giao, không thể hủy!!!"));
                 order.Status = OrderStatus.Cancelled;
                 await _unitOfWork.SaveChangesAsync();
                 var responds = _mapper.Map<OrderResponse>(order);
@@ -257,7 +194,7 @@ namespace Services.Implementations
                         {
                             OrderId = id,
                             IsSuccess = false,
-                            Message = "Order not found."
+                            Message = "Không tìm thấy đơn hàng với Id : "+ id
                         });
                         continue;
                     }
@@ -272,7 +209,7 @@ namespace Services.Implementations
                         {
                             OrderId = id,
                             IsSuccess = true,
-                            Message = "Updated successfully.",
+                            Message = "Cập nhật trạng thái thành công!!.",
                         });
                     }
                     catch (Exception ex)
@@ -287,7 +224,7 @@ namespace Services.Implementations
                 }
 
                 await _unitOfWork.SaveChangesAsync();
-                return ApiResult<List<UpdateOrderStatusResult>>.Success(results, "Batch update completed.");
+                return ApiResult<List<UpdateOrderStatusResult>>.Success(results, "Cập nhật trạng thái đa đơn hàng thành công!!");
             }
             catch (Exception ex)
             {
