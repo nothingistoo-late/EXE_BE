@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using DTOs;
 using DTOs.BoxType.Respond;
+using DTOs.CartDTOs.Respond;
 using DTOs.Customer.Responds;
 using DTOs.DiscountDTOs.Request;
 using DTOs.DiscountDTOs.Respond;
@@ -109,6 +110,13 @@ namespace Services.Helpers.Mappers
             CreateMap<Discount, DiscountRespondDTO>().ReverseMap();
 
             CreateMap<BoxTypes, BoxTypeRespondDTO>().ReverseMap();
+
+            CreateMap<Order, CartResponse>()
+            .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.OrderDetails)).ReverseMap();
+
+            // Map từ OrderDetail sang CartItemResponse
+            CreateMap<OrderDetail, CartItemResponse>()
+                .ForMember(dest => dest.BoxTypeName,opt => opt.MapFrom(src => src.BoxType != null ? src.BoxType.Name : null)).ReverseMap();
 
 
         }

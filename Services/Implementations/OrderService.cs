@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Repositories.WorkSeeds.Extensions;
 
 namespace Services.Implementations
 {
@@ -27,67 +28,68 @@ namespace Services.Implementations
                 if (request.Items == null || !request.Items.Any())
                     return ApiResult<OrderResponse>.Failure(new Exception("Đơn đặt hàng phải có ít nhất 1 sản phẩm!!!"));
 
-                var userExists = await _unitOfWork.UserRepository.AnyAsync(u => u.Id == request.UserId);
-                if (!userExists)
-                    return ApiResult<OrderResponse>.Failure(new Exception("Không tìm thấy người dùng với Id : ."+ request.UserId));
-
-                var order = new Order
+                return await _unitOfWork.ExecuteTransactionAsync(async () =>
                 {
-                    Id = Guid.NewGuid(),
-                    UserId = request.UserId, // sửa lại cho khớp entity
-                    Status = OrderStatus.Pending,
-                    DeliveryMethod = request.DeliveryMethod,
-                    PaymentMethod = request.PaymentMethod,
-                    CreatedAt = DateTime.UtcNow
-                };
+                    var userExists = await _unitOfWork.UserRepository.AnyAsync(u => u.Id == request.UserId);
+                    if (!userExists)
+                        return ApiResult<OrderResponse>.Failure(new Exception("Không tìm thấy người dùng với Id : ." + request.UserId));
 
-                foreach (var item in request.Items)
-                {
-                    if (item.Quantity <= 0)
-                        return ApiResult<OrderResponse>.Failure(new Exception($"Số lượng đặt hàng của Boxtype {item.BoxTypeId} không hợp lí, số lượng bạn đặt đang là : "+ item.Quantity));
-
-                    var box = await _unitOfWork.BoxTypeRepository.GetByIdAsync(item.BoxTypeId);
-                    if (box == null)
-                        return ApiResult<OrderResponse>.Failure(new Exception($"BoxType {item.BoxTypeId} không tìm thấy, xin kiểm tra và hãy thử lại!!"));
-
-                    order.OrderDetails.Add(new OrderDetail
+                    var order = new Order
                     {
                         Id = Guid.NewGuid(),
-                        OrderId = order.Id,
-                        BoxTypeId = item.BoxTypeId,
-                        Quantity = item.Quantity,
-                        UnitPrice = box.Price
-                    });
-                }
+                        UserId = request.UserId,
+                        Status = OrderStatus.Pending,
+                        DeliveryMethod = request.DeliveryMethod,
+                        PaymentMethod = request.PaymentMethod,
+                        CreatedAt = DateTime.UtcNow,
+                        OrderDetails = new List<OrderDetail>()
+                    };
 
-                // Tính giá gốc
-                order.TotalPrice = order.OrderDetails.Sum(d => d.UnitPrice * d.Quantity);
-                order.FinalPrice = order.TotalPrice;
-                // Check discount (nếu có)
-                if (!string.IsNullOrWhiteSpace(request.DiscountCode))
-                {
-                    order.DiscountCode = request.DiscountCode;
-                    var discount = await _unitOfWork.DiscountRepository
-                        .FirstOrDefaultAsync(d => d.Code == request.DiscountCode && d.IsActive);
+                    foreach (var item in request.Items)
+                    {
+                        if (item.Quantity <= 0)
+                            return ApiResult<OrderResponse>.Failure(new Exception($"Số lượng đặt hàng của Boxtype {item.BoxTypeId} không hợp lí, số lượng bạn đặt đang là : " + item.Quantity));
 
-                    if (discount == null)
-                        return ApiResult<OrderResponse>.Failure(new Exception("Mã giảm giá không tồn tại hoặc đã hết hạn!!"));
+                        var box = await _unitOfWork.BoxTypeRepository.GetByIdAsync(item.BoxTypeId);
+                        if (box == null)
+                            return ApiResult<OrderResponse>.Failure(new Exception($"BoxType {item.BoxTypeId} không tìm thấy, xin kiểm tra và hãy thử lại!!"));
 
-                    order.FinalPrice = discount.IsPercentage
-                        ? order.TotalPrice * (1 - discount.DiscountValue / 100)
-                        : order.TotalPrice - discount.DiscountValue;
+                        order.OrderDetails.Add(new OrderDetail
+                        {
+                            Id = Guid.NewGuid(),
+                            OrderId = order.Id,
+                            BoxTypeId = item.BoxTypeId,
+                            Quantity = item.Quantity,
+                            UnitPrice = box.Price
+                        });
+                    }
 
-                    if (order.FinalPrice < 0)
-                        order.FinalPrice = 0;
-                }
+                    order.TotalPrice = order.OrderDetails.Sum(d => d.UnitPrice * d.Quantity);
+                    order.FinalPrice = order.TotalPrice;
 
-                await _unitOfWork.OrderRepository.AddAsync(order);
-                await _unitOfWork.SaveChangesAsync();
+                    if (!string.IsNullOrWhiteSpace(request.DiscountCode))
+                    {
+                        order.DiscountCode = request.DiscountCode;
+                        var discount = await _unitOfWork.DiscountRepository
+                            .FirstOrDefaultAsync(d => d.Code == request.DiscountCode && d.IsActive);
 
-                // Map sang DTO
-                var response = _mapper.Map<OrderResponse>(order);
+                        if (discount == null)
+                            return ApiResult<OrderResponse>.Failure(new Exception("Mã giảm giá không tồn tại hoặc đã hết hạn!!"));
 
-                return ApiResult<OrderResponse>.Success(response, "Tạo đơn hàng thành công!!.");
+                        order.FinalPrice = discount.IsPercentage
+                            ? order.TotalPrice * (1 - discount.DiscountValue / 100)
+                            : order.TotalPrice - discount.DiscountValue;
+
+                        if (order.FinalPrice < 0)
+                            order.FinalPrice = 0;
+                    }
+
+                    await _unitOfWork.OrderRepository.AddAsync(order);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    var response = _mapper.Map<OrderResponse>(order);
+                    return ApiResult<OrderResponse>.Success(response, "Tạo đơn hàng thành công!!.");
+                });
             }
             catch (Exception ex)
             {
@@ -125,7 +127,13 @@ namespace Services.Implementations
 
                 var orders = await _unitOfWork.OrderRepository.GetAllOrdersByCustomerIdAsync(customerId);
 
-                if (orders == null || orders.Count == 0)
+                if (orders == null)
+                    return ApiResult<List<OrderResponse>>.Failure(new Exception("Không tìm thấy đơn hàng nào cho khách hàng này : " + customerId));
+
+                // loại bỏ đơn hàng có trạng thái Cart
+                orders = orders.Where(o => o.Status != OrderStatus.Cart).ToList();
+
+                if (orders.Count == 0)
                     return ApiResult<List<OrderResponse>>.Failure(new Exception("Không tìm thấy đơn hàng nào cho khách hàng này : " + customerId));
 
                 var response = _mapper.Map<List<OrderResponse>>(orders);
@@ -142,7 +150,7 @@ namespace Services.Implementations
         {
             try
             {
-                var orders = await _unitOfWork.OrderRepository.GetAllAsync(null, includes: o=> o.OrderDetails);
+                var orders = await _unitOfWork.OrderRepository.GetAllAsync(o => o.Status != OrderStatus.Cart, includes: o=> o.OrderDetails);
 
                 if (orders == null || orders.Count == 0)
                     return ApiResult<List<OrderResponse>>.Failure(new Exception("Không tìm thấy đơn hàng nào!!"));

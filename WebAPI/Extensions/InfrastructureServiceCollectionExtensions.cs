@@ -100,7 +100,7 @@ namespace WebAPI.Extensions
             services.AddScoped<IOrderRepository, OrderRepository>();
             services.AddScoped<IBoxTypeRepository, BoxTypeRepository>();
             services.AddScoped<IDiscountRepository, DiscountRepository>();
-
+            services.AddScoped<IOrderDetailRepository, OrderDetailRepository>();
 
 
             services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -112,6 +112,7 @@ namespace WebAPI.Extensions
             services.AddScoped<IOrderService, OrderService>();
             services.AddScoped<IDiscountService, DiscountService>();
             services.AddScoped<IBoxTypeService, BoxTypeService>();
+            services.AddScoped<ICartService, CartService>();
 
             // 5. Email + Quartz
             services.AddEmailServices(options =>

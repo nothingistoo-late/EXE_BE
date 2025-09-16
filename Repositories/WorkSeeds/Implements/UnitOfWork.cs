@@ -18,6 +18,7 @@ namespace Repositories.WorkSeeds.Implements
         private IBoxTypeRepository? _boxTypesRepository;
         private IDiscountRepository? _discountRepository;
         private IOrderRepository? _orderRepository;
+        private IOrderDetailRepository? _orderDetailRepository;
         public UnitOfWork(EXE_BE context, IRepositoryFactory repositoryFactory, ILogger<UnitOfWork> logger)
         {
             _context = context;
@@ -36,6 +37,8 @@ namespace Repositories.WorkSeeds.Implements
             _discountRepository ??= _repositoryFactory.GetCustomRepository<IDiscountRepository>();
         public IOrderRepository OrderRepository => 
             _orderRepository ??= _repositoryFactory.GetCustomRepository<IOrderRepository>();
+        public IOrderDetailRepository OrderDetailRepository => 
+            _orderDetailRepository ??= _repositoryFactory.GetCustomRepository<IOrderDetailRepository>();
         public IGenericRepository<TEntity, TKey> GetRepository<TEntity, TKey>()
             where TEntity : class
         {
