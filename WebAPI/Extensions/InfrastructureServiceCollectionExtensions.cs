@@ -113,7 +113,9 @@ namespace WebAPI.Extensions
             services.AddScoped<IDiscountService, DiscountService>();
             services.AddScoped<IBoxTypeService, BoxTypeService>();
             services.AddScoped<ICartService, CartService>();
-
+            services.AddHttpClient<ChatBoxAI.Services.IGeminiService, ChatBoxAI.Services.GeminiService>();
+            services.Configure<ChatBoxAI.Options.GeminiOptions>(
+                configuration.GetSection(ChatBoxAI.Options.GeminiOptions.SectionName));
             // 5. Email + Quartz
             services.AddEmailServices(options =>
             {
