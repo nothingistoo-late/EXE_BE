@@ -22,6 +22,9 @@ namespace Repositories
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderDetail> OrderDetails { get; set; }
         public DbSet<Discount> Discounts { get; set; }
+        public DbSet<CustomerSubscription> CustomerSubscriptions { get; set; }
+        public DbSet<HealthSurvey> HealthSurveys { get; set; }
+        public DbSet<SubscriptionPackage> SubscriptionPackages { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

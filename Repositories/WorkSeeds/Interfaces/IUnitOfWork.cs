@@ -10,7 +10,10 @@ namespace Repositories.WorkSeeds.Interfaces
         IBoxTypeRepository BoxTypeRepository { get; }
         IDiscountRepository DiscountRepository { get; }
         IOrderRepository OrderRepository { get; }
-
         IOrderDetailRepository OrderDetailRepository { get; }
+        ISubscriptionPackageRepository SubscriptionPackageRepository { get; }
+        ICustomerSubscriptionRepository CustomerSubscriptionRepository { get; }
+        IHealthSurveyRepository HealthSurveyRepository { get; }
+        
     }
 }

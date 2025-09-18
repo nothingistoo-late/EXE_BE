@@ -3,6 +3,7 @@ using DTOs;
 using DTOs.BoxType.Respond;
 using DTOs.CartDTOs.Respond;
 using DTOs.Customer.Responds;
+using DTOs.CustomerSubscriptionRequest.Respond;
 using DTOs.DiscountDTOs.Request;
 using DTOs.DiscountDTOs.Respond;
 using DTOs.OrderDTOs.Respond;
@@ -117,8 +118,19 @@ namespace Services.Helpers.Mappers
             // Map từ OrderDetail sang CartItemResponse
             CreateMap<OrderDetail, CartItemResponse>()
                 .ForMember(dest => dest.BoxTypeName,opt => opt.MapFrom(src => src.BoxType != null ? src.BoxType.Name : null)).ReverseMap();
-
-
+            // Map CustomerSubscription -> CustomerSubscriptionResponse
+            CreateMap<CustomerSubscription, CustomerSubscriptionResponse>()
+                .ForMember(dest => dest.HealthSurveyId,
+                    opt => opt.MapFrom(src => src.HealthSurvey != null ? src.HealthSurvey.Id : Guid.Empty))
+                .ForMember(dest => dest.Allergy,
+                    opt => opt.MapFrom(src => src.HealthSurvey != null ? src.HealthSurvey.Allergy : null))
+                .ForMember(dest => dest.Feeling,
+                    opt => opt.MapFrom(src => src.HealthSurvey != null ? src.HealthSurvey.Feeling : null))
+                // Nếu Status / PaymentStatus là enum -> convert sang string
+                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+                .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => src.PaymentStatus.ToString()))
+                .ForMember(dest => dest.PaymentMethod, opt => opt.MapFrom(src => src.PaymentMethod.ToString()));
         }
+
     }
 }

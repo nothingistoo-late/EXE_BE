@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using BusinessObjects.Common;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Repositories
@@ -19,6 +20,32 @@ namespace Repositories
                 };
 
                 await context.AddRangeAsync(roles);
+                await context.SaveChangesAsync();
+            }
+            #endregion
+            #region Seed SubscriptionPackage
+            if (!context.SubscriptionPackages.Any())
+            {
+                var packages = new List<SubscriptionPackage>
+                {
+                    new SubscriptionPackage
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Weekly Care",
+                    Description = "Gói chăm sóc hằng tuần – giao hàng 7 ngày/lần",
+                    Frequency = SubscriptionPackageFrequency.Weekly,
+                    Price = 199_000 // VND
+                },
+                new SubscriptionPackage
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Monthly Deluxe",
+                    Description = "Gói chăm sóc cao cấp – giao hàng mỗi tháng",
+                    Frequency = SubscriptionPackageFrequency.Monthly,
+                    Price = 699_000 // VND
+                }
+                };
+                await context.SubscriptionPackages.AddRangeAsync(packages);
                 await context.SaveChangesAsync();
             }
             #endregion

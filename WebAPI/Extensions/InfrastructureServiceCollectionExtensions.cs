@@ -101,7 +101,9 @@ namespace WebAPI.Extensions
             services.AddScoped<IBoxTypeRepository, BoxTypeRepository>();
             services.AddScoped<IDiscountRepository, DiscountRepository>();
             services.AddScoped<IOrderDetailRepository, OrderDetailRepository>();
-
+            services.AddScoped<ISubscriptionPackageRepository, SubscriptionPackageRepository>();
+            services.AddScoped<ICustomerSubscriptionRepository, CustomerSubscriptionRepository>();
+            services.AddScoped<IHealthSurveyRepository, HealthSurveyRepository>();
 
             services.AddScoped<ICurrentUserService, CurrentUserService>();
             services.AddScoped<ITokenService, TokenService>();
@@ -113,6 +115,8 @@ namespace WebAPI.Extensions
             services.AddScoped<IDiscountService, DiscountService>();
             services.AddScoped<IBoxTypeService, BoxTypeService>();
             services.AddScoped<ICartService, CartService>();
+            services.AddScoped<ICustomerSubscriptionService, CustomerSubscriptionService>();
+            //services.AddScoped<IHealthSurveyService, HealthSurveyService>();
             services.AddHttpClient<ChatBoxAI.Services.IGeminiService, ChatBoxAI.Services.GeminiService>();
             services.Configure<ChatBoxAI.Options.GeminiOptions>(
                 configuration.GetSection(ChatBoxAI.Options.GeminiOptions.SectionName));

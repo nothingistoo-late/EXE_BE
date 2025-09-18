@@ -19,6 +19,9 @@ namespace Repositories.WorkSeeds.Implements
         private IDiscountRepository? _discountRepository;
         private IOrderRepository? _orderRepository;
         private IOrderDetailRepository? _orderDetailRepository;
+        private ISubscriptionPackageRepository? _subscriptionPackageRepository;
+        private ICustomerSubscriptionRepository? _customerSubscriptionRepository;
+        private IHealthSurveyRepository? _healthSurveyRepository;
         public UnitOfWork(EXE_BE context, IRepositoryFactory repositoryFactory, ILogger<UnitOfWork> logger)
         {
             _context = context;
@@ -39,6 +42,12 @@ namespace Repositories.WorkSeeds.Implements
             _orderRepository ??= _repositoryFactory.GetCustomRepository<IOrderRepository>();
         public IOrderDetailRepository OrderDetailRepository => 
             _orderDetailRepository ??= _repositoryFactory.GetCustomRepository<IOrderDetailRepository>();
+        public ISubscriptionPackageRepository SubscriptionPackageRepository => 
+            _subscriptionPackageRepository ??= _repositoryFactory.GetCustomRepository<ISubscriptionPackageRepository>();
+        public ICustomerSubscriptionRepository CustomerSubscriptionRepository => 
+            _customerSubscriptionRepository ??= _repositoryFactory.GetCustomRepository<ICustomerSubscriptionRepository>();
+        public IHealthSurveyRepository HealthSurveyRepository => 
+            _healthSurveyRepository ??= _repositoryFactory.GetCustomRepository<IHealthSurveyRepository>();
         public IGenericRepository<TEntity, TKey> GetRepository<TEntity, TKey>()
             where TEntity : class
         {

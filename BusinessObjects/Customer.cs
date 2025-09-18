@@ -16,5 +16,10 @@ namespace BusinessObjects
         public string Address { get; set; } = null!;
         public string? ImgURL { get; set; } = null!;
 
+        // Khoá ngoại tới CustomerSubscription
+        public Guid? CustomerSubscriptionId { get; set; }
+
+        [ForeignKey(nameof(CustomerSubscriptionId))]
+        public virtual CustomerSubscription? CustomerSubscription { get; set; }
     }
 }
