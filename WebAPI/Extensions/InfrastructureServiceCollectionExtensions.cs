@@ -37,7 +37,6 @@ namespace WebAPI.Extensions
             {
                 // Bắt buộc phải xác thực email mới cho SignIn
                 opts.SignIn.RequireConfirmedEmail = true;
-
                 opts.ClaimsIdentity.UserNameClaimType = ClaimTypes.Name;
                 opts.ClaimsIdentity.RoleClaimType = ClaimTypes.Role;
                 opts.Lockout.MaxFailedAccessAttempts = 5;
