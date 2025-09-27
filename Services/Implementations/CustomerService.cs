@@ -39,6 +39,18 @@ namespace Services.Implementations
 
                 // Bước 1: Tạo User
                 var user = _mapper.Map<User>(dto);
+                var existingUser = await _userManager.FindByEmailAsync(user.Email);
+                if (existingUser != null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return ApiResult<CreateCustomerRequestDTO>.Failure(new Exception("Email đã được sử dụng bởi người dùng khác."));
+                }
+                existingUser = await _unitOfWork.UserRepository.FirstOrDefaultAsync(c => c.PhoneNumber == dto.PhoneNumber);
+                if (existingUser != null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return ApiResult<CreateCustomerRequestDTO>.Failure(new Exception("Số điện thoại đã được sử dụng bởi người dùng khác."));
+                }
 
                 var createUserResult = await _userManager.CreateAsync(user, dto.Password);
                 if (!createUserResult.Succeeded)

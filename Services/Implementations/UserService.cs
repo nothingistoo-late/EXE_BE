@@ -255,15 +255,15 @@ namespace Services.Implementations
         public async Task<ApiResult<UserResponse>> LoginAsync(UserLoginRequest req)
         {
             // 1. Guard clause
-            if (req is null || string.IsNullOrWhiteSpace(req.Login) || string.IsNullOrWhiteSpace(req.Password))
+            if (req is null || string.IsNullOrWhiteSpace(req.EmailOrPhoneNumber) || string.IsNullOrWhiteSpace(req.Password))
                 return ApiResult<UserResponse>.Failure(new ArgumentException("Invalid request"));
 
-            _logger.LogInformation("Login attempt: {Login}", req.Login);
+            _logger.LogInformation("Login attempt: {Login}", req.EmailOrPhoneNumber);
 
             // 2. Locate user (email OR username)
-            var user = req.Login.Contains('@', StringComparison.OrdinalIgnoreCase)
-                ? await _userManager.FindByEmailAsync(req.Login)
-                : await _userManager.FindByNameAsync(req.Login);
+            var user = req.EmailOrPhoneNumber.Contains('@', StringComparison.OrdinalIgnoreCase)
+                ? await _userManager.FindByEmailAsync(req.EmailOrPhoneNumber)
+                : await _unitOfWork.UserRepository.FirstOrDefaultAsync(c=> c.PhoneNumber == req.EmailOrPhoneNumber);
 
             // 3. Validate credentials
             if (user is null || !await _userManager.CheckPasswordAsync(user, req.Password))

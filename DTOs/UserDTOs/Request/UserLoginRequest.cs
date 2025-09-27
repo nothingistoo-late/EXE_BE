@@ -5,7 +5,7 @@ namespace DTOs.UserDTOs.Request
     public class UserLoginRequest
     {
         [Required]
-        public string Login { get; set; } = string.Empty;
+        public string EmailOrPhoneNumber { get; set; } = string.Empty;
         [Required]
         public string Password { get; set; } = string.Empty;
     }
