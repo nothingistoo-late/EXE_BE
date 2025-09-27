@@ -50,12 +50,14 @@ namespace Services.Helpers.Mappers
             // Customer -> CreateCustomerRequestDTO
             CreateMap<CreateCustomerRequestDTO, User>()
                  .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
-                 .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.FirstName))
+                 .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src =>
+                     string.IsNullOrWhiteSpace(src.FullName) ? string.Empty :
+                     src.FullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty))
+                 .ForMember(dest => dest.LastName, opt => opt.MapFrom(src =>
+                     string.IsNullOrWhiteSpace(src.FullName) ? string.Empty :
+                     string.Join(" ", src.FullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).Skip(1))))
                  .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))
-                 .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.LastName))
-                 .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
-                 .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender))
-                 ; 
+                 .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber));
 
             // Customer -> CustomerRespondDTO
             CreateMap<Customer, CustomerRespondDTO>()

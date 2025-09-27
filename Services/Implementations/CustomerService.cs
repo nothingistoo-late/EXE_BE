@@ -53,7 +53,6 @@ namespace Services.Implementations
                     {
                         UserId = user.Id,
                         Address = dto.Address,
-                        ImgURL = dto.imgURL ?? string.Empty,
                 };
 
                 await _repository.AddAsync(customer);
