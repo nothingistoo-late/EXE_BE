@@ -72,6 +72,10 @@ namespace Services.Implementations
                     if (dto.Quantity <= 0)
                         return ApiResult<CartResponse>.Failure(
                             new Exception("Số lượng phải lớn hơn 0"));
+                    
+                    if (dto.Quantity > 1000) // Giới hạn số lượng hợp lý
+                        return ApiResult<CartResponse>.Failure(
+                            new Exception("Số lượng không được vượt quá 1000"));
 
                     // 2. Tìm giỏ hàng hiện có
                     var existingCart = await _unitOfWork.OrderRepository
@@ -125,8 +129,7 @@ namespace Services.Implementations
                     }
 
                     // 5. Tính lại giá
-                    cart.TotalPrice = cart.OrderDetails.Sum(i => i.Quantity * i.UnitPrice)
-                        + (existingItem == null ? dto.Quantity * box.Price : 0);
+                    cart.TotalPrice = cart.OrderDetails.Sum(i => i.Quantity * i.UnitPrice);
                     cart.FinalPrice = cart.TotalPrice;
 
                     // 6. SaveChanges một lần duy nhất
@@ -163,6 +166,9 @@ namespace Services.Implementations
 
                     if (quantity < 0)
                         return ApiResult<CartResponse>.Failure(new Exception("Số lượng không hợp lệ"));
+                    
+                    if (quantity > 1000) // Giới hạn số lượng hợp lý
+                        return ApiResult<CartResponse>.Failure(new Exception("Số lượng không được vượt quá 1000"));
 
                     var cart = await _unitOfWork.OrderRepository
                         .FirstOrDefaultAsync(o => o.UserId == userId && o.Status == OrderStatus.Cart,
@@ -182,13 +188,19 @@ namespace Services.Implementations
                     else
                     {
                         item.Quantity = quantity;
-                        await _unitOfWork.OrderDetailRepository.UpdateAsync(item);
+                        // Không cần UpdateAsync vì entity đang được track
                     }
 
                     cart.TotalPrice = cart.OrderDetails.Sum(i => i.Quantity * i.UnitPrice);
                     cart.FinalPrice = cart.TotalPrice;
 
-                    await _unitOfWork.OrderRepository.UpdateAsync(cart);
+                    // Nếu giỏ hàng trống sau khi cập nhật, xóa luôn cart
+                    if (!cart.OrderDetails.Any())
+                    {
+                        await _unitOfWork.OrderRepository.DeleteAsync(cart.Id);
+                        return ApiResult<CartResponse>.Success(null, "Giỏ hàng đã được xóa vì không còn sản phẩm nào!");
+                    }
+
                     await _unitOfWork.SaveChangesAsync();
 
                     return ApiResult<CartResponse>.Success(_mapper.Map<CartResponse>(cart),
@@ -229,7 +241,12 @@ namespace Services.Implementations
                     cart.TotalPrice = cart.OrderDetails.Sum(i => i.Quantity * i.UnitPrice);
                     cart.FinalPrice = cart.TotalPrice;
 
-                    await _unitOfWork.OrderRepository.UpdateAsync(cart);
+                    // Nếu giỏ hàng trống sau khi xóa, xóa luôn cart
+                    if (!cart.OrderDetails.Any())
+                    {
+                        await _unitOfWork.OrderRepository.DeleteAsync(cart.Id);
+                    }
+
                     await _unitOfWork.SaveChangesAsync();
 
                     return ApiResult<bool>.Success(true, "Xoá sản phẩm khỏi giỏ thành công!");
@@ -269,7 +286,8 @@ namespace Services.Implementations
                     cart.TotalPrice = 0;
                     cart.FinalPrice = 0;
 
-                    await _unitOfWork.OrderRepository.UpdateAsync(cart);
+                    // Xóa luôn cart vì không còn item nào
+                    await _unitOfWork.OrderRepository.DeleteAsync(cart.Id);
                     await _unitOfWork.SaveChangesAsync();
 
                     return ApiResult<bool>.Success(true, "Đã xoá toàn bộ giỏ hàng!");
@@ -332,7 +350,7 @@ namespace Services.Implementations
                     cart.IsPaid = false;
                     cart.IsDelivered = false;
 
-                    await _unitOfWork.OrderRepository.UpdateAsync(cart);
+                    // Không cần UpdateAsync vì entity đang được track
                     await _unitOfWork.SaveChangesAsync();
 
                     return ApiResult<CartResponse>.Success(_mapper.Map<CartResponse>(cart),
