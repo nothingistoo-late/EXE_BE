@@ -8,6 +8,7 @@ using Repositories.Interfaces;
 using Services.Helpers.Mappers;
 using System.Text;
 using Services.Commons.Gmail;
+using Services.Options;
 
 
 namespace WebAPI.Extensions
@@ -19,6 +20,8 @@ namespace WebAPI.Extensions
             // 1. Cấu hình Settings
             services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
+            services.Configure<HuggingFaceOptions>(configuration.GetSection("HuggingFace"));
+            services.Configure<GroqOptions>(configuration.GetSection("Groq"));
 
             // 2. DbContext và CORS
             services.AddDbContext<EXE_BE>(opt =>
@@ -112,6 +115,17 @@ namespace WebAPI.Extensions
             services.AddScoped<ICustomerService, CustomerService>();
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IEXEGmailService, EXEGmailService>();
+            services.AddScoped<IStatisticsService, StatisticsService>();
+            // Use GroqAIService for AI functionality
+            services.AddScoped<IAIService>(provider =>
+            {
+                var config = provider.GetRequiredService<IConfiguration>();
+                var groqOptions = config.GetSection("Groq").Get<GroqOptions>();
+                var httpClient = provider.GetRequiredService<HttpClient>();
+                return new GroqAIService(httpClient, groqOptions?.ApiKey ?? string.Empty, groqOptions?.Model ?? "llama-3.1-8b-instant");
+            });
+            // services.AddScoped<IHuggingFaceService, MockAIService>();
+            // services.AddScoped<IHuggingFaceService, HuggingFaceService>();
             services.AddScoped<IOrderService, OrderService>();
             services.AddScoped<IDiscountService, DiscountService>();
             services.AddScoped<IBoxTypeService, BoxTypeService>();
@@ -122,6 +136,9 @@ namespace WebAPI.Extensions
             services.AddHttpClient<ChatBoxAI.Services.IGeminiService, ChatBoxAI.Services.GeminiService>();
             services.Configure<ChatBoxAI.Options.GeminiOptions>(
                 configuration.GetSection(ChatBoxAI.Options.GeminiOptions.SectionName));
+            
+            // Add HttpClient for Hugging Face
+            services.AddHttpClient<IHuggingFaceService, HuggingFaceService>();
             // 5. Email + Quartz
             services.AddEmailServices(options =>
             {

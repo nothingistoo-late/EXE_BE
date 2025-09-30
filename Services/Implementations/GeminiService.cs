@@ -28,10 +28,52 @@ namespace ChatBoxAI.Services
                 throw new InvalidOperationException("Gemini ApiKey is not configured.");
             }
 
-            var model = string.IsNullOrWhiteSpace(_options.Model)
-                ? "gemini-1.5-flash"
-                : _options.Model;
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                throw new ArgumentException("Prompt cannot be null or empty.", nameof(prompt));
+            }
 
+            // Danh sách các model có thể sử dụng (theo thứ tự ưu tiên)
+            var availableModels = new[]
+            {
+                _options.Model,
+                "gemini-1.5-flash",
+                "gemini-1.5-pro"
+            }.Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToArray();
+
+            Exception? lastException = null;
+
+            foreach (var model in availableModels)
+            {
+                try
+                {
+                    var result = await TryGenerateWithModelAsync(model, prompt, cancellationToken);
+                    if (!string.IsNullOrWhiteSpace(result))
+                    {
+                        return result;
+                    }
+                }
+                catch (HttpRequestException ex) when (ex.Message.Contains("404"))
+                {
+                    // Model không tồn tại, thử model tiếp theo
+                    lastException = ex;
+                    continue;
+                }
+                catch (Exception ex)
+                {
+                    lastException = ex;
+                    break; // Lỗi khác, không thử model khác
+                }
+            }
+
+            // Nếu tất cả model đều fail
+            throw new InvalidOperationException(
+                $"All Gemini models failed. Last error: {lastException?.Message}", 
+                lastException);
+        }
+
+        private async Task<string> TryGenerateWithModelAsync(string model, string prompt, CancellationToken cancellationToken)
+        {
             var request = new GeminiGenerateContentRequest
             {
                 Contents =

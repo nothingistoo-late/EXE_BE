@@ -11,6 +11,8 @@ namespace BusinessObjects
     {
         public Guid Id { get; set; }
         public Guid UserId { get; set; }
+        public User User { get; set; } = null!;
+
         public OrderStatus Status { get; set; }
         public bool IsPaid { get; set; } = false;
         public bool IsDelivered { get; set; } = false;
