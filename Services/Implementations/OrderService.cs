@@ -10,15 +10,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Repositories.WorkSeeds.Extensions;
+using Services.Commons.Gmail;
 
 namespace Services.Implementations
 {
     public class OrderService : BaseService<Order, Guid>, IOrderService
     {
         private readonly IMapper _mapper;
-        public OrderService(IMapper mapper, IGenericRepository<Order, Guid> repository, ICurrentUserService currentUserService, IUnitOfWork unitOfWork, ICurrentTime currentTime) : base(repository, currentUserService, unitOfWork, currentTime)
+        private readonly IEXEGmailService _emailService;
+        
+        public OrderService(IMapper mapper, IGenericRepository<Order, Guid> repository, ICurrentUserService currentUserService, IUnitOfWork unitOfWork, ICurrentTime currentTime, IEXEGmailService emailService) : base(repository, currentUserService, unitOfWork, currentTime)
         {
             _mapper = mapper;
+            _emailService = emailService;
         }
 
         public async Task<ApiResult<OrderResponse>> CreateOrderAsync(CreateOrderRequest request)
@@ -86,6 +90,25 @@ namespace Services.Implementations
 
                     await _unitOfWork.OrderRepository.AddAsync(order);
                     await _unitOfWork.SaveChangesAsync();
+
+                    // Gửi email xác nhận đơn hàng cho khách hàng và thông báo cho admin
+                    try
+                    {
+                        var user = await _unitOfWork.UserRepository.GetByIdAsync(request.UserId);
+                        if (user != null)
+                        {
+                            // Gửi email xác nhận cho khách hàng
+                            await _emailService.SendOrderConfirmationEmailAsync(user.Email, order);
+                            
+                            // Gửi thông báo cho admin
+                            await _emailService.SendNewOrderNotificationToAdminAsync(order);
+                        }
+                    }
+                    catch (Exception emailEx)
+                    {
+                        // Log lỗi email nhưng không làm fail transaction
+                        // Có thể log vào file hoặc database
+                    }
 
                     var response = _mapper.Map<OrderResponse>(order);
                     return ApiResult<OrderResponse>.Success(response, "Tạo đơn hàng thành công!!.");
@@ -211,7 +234,31 @@ namespace Services.Implementations
                     {
                         order.Status = status;
                         order.UpdatedAt = DateTime.UtcNow;
+                        
+                        // Nếu trạng thái được cập nhật thành Paid, đánh dấu đã thanh toán
+                        if (status == OrderStatus.Completed)
+                        {
+                            order.IsPaid = true;
+                        }
+                        
                         await _unitOfWork.OrderRepository.UpdateAsync(order);
+
+                        // Gửi email khi thanh toán thành công
+                        if (status == OrderStatus.Completed)
+                        {
+                            try
+                            {
+                                var user = await _unitOfWork.UserRepository.GetByIdAsync(order.UserId);
+                                if (user != null)
+                                {
+                                    await _emailService.SendPaymentSuccessEmailAsync(user.Email, order);
+                                }
+                            }
+                            catch (Exception emailEx)
+                            {
+                                // Log lỗi email nhưng không làm fail transaction
+                            }
+                        }
 
                         results.Add(new UpdateOrderStatusResult
                         {

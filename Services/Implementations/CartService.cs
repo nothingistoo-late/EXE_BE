@@ -9,24 +9,27 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Repositories.WorkSeeds.Extensions;
+using Services.Commons.Gmail;
 
 namespace Services.Implementations
 {
     public class CartService : BaseService<Order, Guid>, ICartService
     {
         private readonly IMapper _mapper;
+        private readonly IEXEGmailService _emailService;
 
         public CartService(IMapper mapper, IGenericRepository<Order, Guid> repository,
             ICurrentUserService currentUserService,
             IUnitOfWork unitOfWork,
-            ICurrentTime currentTime) :
+            ICurrentTime currentTime,
+            IEXEGmailService emailService) :
             base(repository,
                 currentUserService,
                 unitOfWork,
                 currentTime)
         {
             _mapper = mapper;
-
+            _emailService = emailService;
         }
 
         // ====================== GET CART ======================
@@ -352,6 +355,25 @@ namespace Services.Implementations
 
                     // Không cần UpdateAsync vì entity đang được track
                     await _unitOfWork.SaveChangesAsync();
+
+                    // Gửi email xác nhận đơn hàng cho khách hàng và thông báo cho admin
+                    try
+                    {
+                        var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+                        if (user != null)
+                        {
+                            // Gửi email xác nhận cho khách hàng
+                            await _emailService.SendOrderConfirmationEmailAsync(user.Email, cart);
+                            
+                            // Gửi thông báo cho admin
+                            await _emailService.SendNewOrderNotificationToAdminAsync(cart);
+                        }
+                    }
+                    catch (Exception emailEx)
+                    {
+                        // Log lỗi email nhưng không làm fail transaction
+                        // Có thể log vào file hoặc database
+                    }
 
                     return ApiResult<CartResponse>.Success(_mapper.Map<CartResponse>(cart),
                         "Đặt hàng thành công!");

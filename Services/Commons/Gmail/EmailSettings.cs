@@ -8,5 +8,6 @@
         public string SmtpPassword { get; set; }
         public string FromEmail { get; set; }
         public string FromName { get; set; }
+        public string AdminEmail { get; set; }
     }
 }

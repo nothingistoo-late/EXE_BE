@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Services.Commons.Gmail;
 
 namespace Services.Implementations
 {
@@ -24,11 +25,14 @@ namespace Services.Implementations
         private readonly UserManager<User> _userManager;
         private readonly IMapper _mapper;
         private readonly EXE_BE _context;
-        public CustomerService(EXE_BE context, IMapper mapper, UserManager<User> usermanager,IGenericRepository<Customer, Guid> repository, ICurrentUserService currentUserService, IUnitOfWork unitOfWork, ICurrentTime currentTime) : base(repository, currentUserService, unitOfWork, currentTime)
+        private readonly IEXEGmailService _emailService;
+        
+        public CustomerService(EXE_BE context, IMapper mapper, UserManager<User> usermanager,IGenericRepository<Customer, Guid> repository, ICurrentUserService currentUserService, IUnitOfWork unitOfWork, ICurrentTime currentTime, IEXEGmailService emailService) : base(repository, currentUserService, unitOfWork, currentTime)
         {
             _userManager = usermanager;
             _mapper = mapper;   
             _context = context;
+            _emailService = emailService;
         }
 
         public async Task<ApiResult<CreateCustomerRequestDTO>> CreateCustomerAsync(CreateCustomerRequestDTO dto)
@@ -72,6 +76,17 @@ namespace Services.Implementations
 
                 // ✅ Commit transaction
                 await _unitOfWork.CommitTransactionAsync();
+
+                // Gửi email chào mừng cho khách hàng mới
+                try
+                {
+                    await _emailService.SendRegistrationSuccessEmailAsync(user.Email, user.FullName);
+                }
+                catch (Exception emailEx)
+                {
+                    // Log lỗi email nhưng không làm fail transaction
+                    // Có thể log vào file hoặc database
+                }
 
                 return ApiResult<CreateCustomerRequestDTO>.Success(dto,"Tạo User + Customer thành công!");
             }

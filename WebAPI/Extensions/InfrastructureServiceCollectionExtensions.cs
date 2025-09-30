@@ -7,6 +7,7 @@ using Repositories.Implements;
 using Repositories.Interfaces;
 using Services.Helpers.Mappers;
 using System.Text;
+using Services.Commons.Gmail;
 
 
 namespace WebAPI.Extensions
@@ -110,6 +111,7 @@ namespace WebAPI.Extensions
             services.AddScoped<IUserEmailService, UserEmailService>();
             services.AddScoped<ICustomerService, CustomerService>();
             services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<IEXEGmailService, EXEGmailService>();
             services.AddScoped<IOrderService, OrderService>();
             services.AddScoped<IDiscountService, DiscountService>();
             services.AddScoped<IBoxTypeService, BoxTypeService>();
