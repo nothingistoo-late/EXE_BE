@@ -1,7 +1,11 @@
-﻿namespace DTOs.UserDTOs.Request
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace DTOs.UserDTOs.Request
 {
     public class ForgotPasswordRequestDTO
     {
-        public string Email { get; set; }
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        public string Email { get; set; } = string.Empty;
     }
 }

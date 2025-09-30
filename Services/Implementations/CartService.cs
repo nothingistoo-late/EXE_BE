@@ -367,6 +367,12 @@ namespace Services.Implementations
                             
                             // Gửi thông báo cho admin
                             await _emailService.SendNewOrderNotificationToAdminAsync(cart);
+                            
+                            // Gửi cảnh báo đơn hàng giá trị cao (ngưỡng 10 triệu VNĐ)
+                            if (cart.FinalPrice > 10000000)
+                            {
+                                await _emailService.SendHighValueOrderAlertAsync(cart, 10000000);
+                            }
                         }
                     }
                     catch (Exception emailEx)

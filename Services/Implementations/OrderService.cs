@@ -18,11 +18,13 @@ namespace Services.Implementations
     {
         private readonly IMapper _mapper;
         private readonly IEXEGmailService _emailService;
+        private readonly IPendingOrderTrackingService _pendingOrderTrackingService;
         
-        public OrderService(IMapper mapper, IGenericRepository<Order, Guid> repository, ICurrentUserService currentUserService, IUnitOfWork unitOfWork, ICurrentTime currentTime, IEXEGmailService emailService) : base(repository, currentUserService, unitOfWork, currentTime)
+        public OrderService(IMapper mapper, IGenericRepository<Order, Guid> repository, ICurrentUserService currentUserService, IUnitOfWork unitOfWork, ICurrentTime currentTime, IEXEGmailService emailService, IPendingOrderTrackingService pendingOrderTrackingService) : base(repository, currentUserService, unitOfWork, currentTime)
         {
             _mapper = mapper;
             _emailService = emailService;
+            _pendingOrderTrackingService = pendingOrderTrackingService;
         }
 
         public async Task<ApiResult<OrderResponse>> CreateOrderAsync(CreateOrderRequest request)
@@ -90,6 +92,9 @@ namespace Services.Implementations
 
                     await _unitOfWork.OrderRepository.AddAsync(order);
                     await _unitOfWork.SaveChangesAsync();
+                    
+                    // Theo dõi đơn hàng pending
+                    _pendingOrderTrackingService.TrackPendingOrder(order.Id);
 
                     // Gửi email xác nhận đơn hàng cho khách hàng và thông báo cho admin
                     try
@@ -102,6 +107,12 @@ namespace Services.Implementations
                             
                             // Gửi thông báo cho admin
                             await _emailService.SendNewOrderNotificationToAdminAsync(order);
+                            
+                            // Gửi cảnh báo đơn hàng giá trị cao (ngưỡng 10 triệu VNĐ)
+                            if (order.FinalPrice > 10000000)
+                            {
+                                await _emailService.SendHighValueOrderAlertAsync(order, 10000000);
+                            }
                         }
                     }
                     catch (Exception emailEx)
@@ -242,22 +253,38 @@ namespace Services.Implementations
                         }
                         
                         await _unitOfWork.OrderRepository.UpdateAsync(order);
-
-                        // Gửi email khi thanh toán thành công
-                        if (status == OrderStatus.Completed)
+                        
+                        // Xóa khỏi tracking khi đơn hàng không còn pending
+                        if (status != OrderStatus.Pending)
                         {
-                            try
+                            _pendingOrderTrackingService.RemovePendingOrder(order.Id);
+                        }
+
+                        // Gửi email theo trạng thái đơn hàng
+                        try
+                        {
+                            var user = await _unitOfWork.UserRepository.GetByIdAsync(order.UserId);
+                            if (user != null)
                             {
-                                var user = await _unitOfWork.UserRepository.GetByIdAsync(order.UserId);
-                                if (user != null)
+                                switch (status)
                                 {
-                                    await _emailService.SendPaymentSuccessEmailAsync(user.Email, order);
+                                    case OrderStatus.Processing:
+                                        await _emailService.SendOrderPreparationEmailAsync(user.Email, order);
+                                        break;
+                                    case OrderStatus.Completed:
+                                        await _emailService.SendPaymentSuccessEmailAsync(user.Email, order);
+                                        break;
+                                    case OrderStatus.Cancelled:
+                                        await _emailService.SendOrderCancelledEmailAsync(user.Email, order, "Đơn hàng đã bị hủy bởi hệ thống");
+                                        // Gửi cảnh báo cho admin khi đơn hàng bị hủy
+                                        await _emailService.SendOrderCancelledAlertAsync(order, "Đơn hàng đã bị hủy bởi hệ thống");
+                                        break;
                                 }
                             }
-                            catch (Exception emailEx)
-                            {
-                                // Log lỗi email nhưng không làm fail transaction
-                            }
+                        }
+                        catch (Exception emailEx)
+                        {
+                            // Log lỗi email nhưng không làm fail transaction
                         }
 
                         results.Add(new UpdateOrderStatusResult

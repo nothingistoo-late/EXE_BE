@@ -8,3 +8,4 @@ namespace Services.Options
         public string Model { get; set; } = "llama-3.1-70b-versatile";
     }
 }
+

@@ -124,6 +124,18 @@ namespace WebAPI.Extensions
                 var httpClient = provider.GetRequiredService<HttpClient>();
                 return new GroqAIService(httpClient, groqOptions?.ApiKey ?? string.Empty, groqOptions?.Model ?? "llama-3.1-8b-instant");
             });
+
+            // OTP Service
+            services.AddScoped<IOTPService, OTPService>();
+
+        // Email Automation Service
+        services.AddScoped<IEmailAutomationService, EmailAutomationService>();
+        
+        // Payment Failure Tracking Service
+        services.AddScoped<IPaymentFailureTrackingService, PaymentFailureTrackingService>();
+        
+        // Pending Order Tracking Service
+        services.AddScoped<IPendingOrderTrackingService, PendingOrderTrackingService>();
             // services.AddScoped<IHuggingFaceService, MockAIService>();
             // services.AddScoped<IHuggingFaceService, HuggingFaceService>();
             services.AddScoped<IOrderService, OrderService>();

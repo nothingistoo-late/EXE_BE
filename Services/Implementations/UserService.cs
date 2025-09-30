@@ -164,33 +164,17 @@ namespace Services.Implementations
 
         public async Task<ApiResult<string>> ResetPasswordAsync(ResetPasswordRequestDTO request)
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Token) || string.IsNullOrWhiteSpace(request.NewPassword))
+            if (request == null || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.OTPCode) || string.IsNullOrWhiteSpace(request.NewPassword))
                 return ApiResult<string>.Failure(new ArgumentException("Invalid request"));
 
             var user = await _userManager.FindByEmailAsync(request.Email);
             if (user == null)
                 return ApiResult<string>.Failure(new InvalidOperationException("Invalid request"));
-            _logger.LogDebug("Incoming token (request): {RequestToken}", request.Token);
+            _logger.LogDebug("Incoming OTP (request): {RequestOTP}", request.OTPCode);
 
-            string token;
-            try
-            {
-                token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(request.Token));
-                _logger.LogDebug("Decoded token: {Decoded}", token);
-
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Lỗi decode token");
-                return ApiResult<string>.Failure(new ArgumentException("Invalid token"));
-            }
-
-            var result = await _userManager.ResetPasswordAsync(user, token, request.NewPassword);
-            if (!result.Succeeded)
-                return ApiResult<string>.Failure(new InvalidOperationException("Password reset failed. Please try again"));
-
-            await _userEmailService.SendPasswordChangedNotificationAsync(request.Email);
-            return ApiResult<string>.Success("Password reset successfully", "Password has been reset successfully");
+            // Note: This method is deprecated in favor of the new OTP-based reset in AuthController
+            // Keeping for backward compatibility but should use AuthController.ResetPassword instead
+            return ApiResult<string>.Failure(new InvalidOperationException("This method is deprecated. Please use /api/Auth/reset-password instead."));
         }
 
         //public async Task<ApiResult<PagedList<UserDetailsDTO>>> SearchUsersAsync(
