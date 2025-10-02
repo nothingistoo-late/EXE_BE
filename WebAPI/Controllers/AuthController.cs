@@ -83,6 +83,20 @@ namespace WebAPI.Controllers
         }
 
         /// <summary>
+        /// Lấy thông tin user hiện tại
+        /// </summary>
+        [HttpGet("current-user")]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            var result = await _userService.GetCurrentUserAsync();
+            if (!result.IsSuccess)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+
+        /// <summary>
         /// Thay đổi mật khẩu
         /// </summary>
         //[HttpPost("change-password")]
