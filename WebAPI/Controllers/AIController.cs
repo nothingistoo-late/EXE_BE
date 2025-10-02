@@ -1,7 +1,8 @@
-using System.Threading;
-using System.Threading.Tasks;
+using DTOs.Gemini;
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace WebAPI.Controllers
 {
@@ -58,6 +59,28 @@ namespace WebAPI.Controllers
             {
                 return BadRequest($"Error in chat: {ex.Message}");
             }
+        }
+        [HttpPost("generate-wish")]
+        public async Task<IActionResult> GenerateWish([FromBody] GenerateWishRequestDto request, CancellationToken cancellationToken)
+        {
+            if (request == null)
+                return BadRequest("Request body cannot be empty.");
+
+            if (string.IsNullOrWhiteSpace(request.Receiver) ||
+                string.IsNullOrWhiteSpace(request.Occasion) ||
+                string.IsNullOrWhiteSpace(request.MainWish))
+            {
+                return BadRequest("Receiver, Occasion, and MainWish are required.");
+            }
+
+            var result = await _aiService.GenerateWishAsync(
+                request.Receiver,
+                request.Occasion,
+                request.MainWish,
+                request.Custom,
+                cancellationToken);
+
+            return Ok(new { wish = result });
         }
     }
 

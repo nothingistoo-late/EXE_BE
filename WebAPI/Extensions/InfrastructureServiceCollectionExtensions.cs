@@ -149,8 +149,6 @@ namespace WebAPI.Extensions
             services.Configure<ChatBoxAI.Options.GeminiOptions>(
                 configuration.GetSection(ChatBoxAI.Options.GeminiOptions.SectionName));
             
-            // Add HttpClient for Hugging Face
-            services.AddHttpClient<IHuggingFaceService, HuggingFaceService>();
             // 5. Email + Quartz
             services.AddEmailServices(options =>
             {

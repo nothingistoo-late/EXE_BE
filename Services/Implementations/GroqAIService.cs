@@ -131,6 +131,79 @@ namespace Services.Implementations
             return result.Message?.Content ?? "Xin lỗi, tôi không thể trả lời lúc này.";
         }
 
+        public async Task<string> GenerateWishAsync(string Receiver, string occasion, string mainWish, string custom, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(_apiKey))
+                {
+                    throw new InvalidOperationException("Groq API key is not configured.");
+                }
+
+                if (string.IsNullOrWhiteSpace(Receiver) || string.IsNullOrWhiteSpace(occasion) || string.IsNullOrWhiteSpace(mainWish))
+                {
+                    throw new ArgumentException("Receiver, occasion, and mainWish cannot be null or empty.");
+                }
+
+                var prompt = $@"Bạn là một AI chuyên viết lời chúc để ghi trên quà tặng.  
+Hãy tạo một lời chúc ngắn gọn, ý nghĩa và phù hợp để viết trên thiệp hoặc in trên quà.  
+Thông tin đầu vào:  
+- Người nhận: {Receiver}  
+- Dịp tặng: {occasion}  
+- Thông điệp chính muốn gửi gắm: {mainWish}  
+- Tùy chỉnh thêm: {custom ?? "Không có yêu cầu đặc biệt"}
+
+Yêu cầu đầu ra:  
+- Một câu chúc duy nhất, 2–3 dòng là đủ, cô đọng nhưng truyền cảm xúc.  
+- Giữ cho lời chúc phù hợp với dịp, không bị chung chung.  
+- Có thể sáng tạo bằng hình ảnh, ẩn dụ hoặc vần điệu nếu hợp ngữ cảnh.";
+
+                var request = new GroqRequest
+                {
+                    Messages = new[]
+                    {
+                        new GroqMessage
+                        {
+                            Role = "user",
+                            Content = prompt
+                        }
+                    },
+                    Model = _model,
+                    MaxTokens = 500,
+                    Temperature = 0.8
+                };
+
+                var uri = "https://api.groq.com/openai/v1/chat/completions";
+
+                using var httpRequest = new HttpRequestMessage(HttpMethod.Post, uri)
+                {
+                    Content = JsonContent.Create(request, options: new JsonSerializerOptions(JsonSerializerDefaults.Web))
+                };
+
+                using var response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                    throw new HttpRequestException($"Groq API error {(int)response.StatusCode}: {response.ReasonPhrase}. Body: {errorBody}");
+                }
+
+                var payload = await response.Content.ReadFromJsonAsync<GroqResponse>(jsonOptions, cancellationToken);
+                if (payload?.Choices == null || payload.Choices.Length == 0)
+                {
+                    return "Xin lỗi, tôi không thể tạo lời chúc lúc này.";
+                }
+
+                var result = payload.Choices[0];
+                return result.Message?.Content ?? "Xin lỗi, tôi không thể tạo lời chúc lúc này.";
+            }
+            catch (Exception ex)
+            {
+                return $"Error generating wish: {ex.Message}";
+            }
+        }
+
         // DTOs for Groq API
         public class GroqRequest
         {
