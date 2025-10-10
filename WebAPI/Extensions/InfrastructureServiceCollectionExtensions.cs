@@ -9,6 +9,9 @@ using Services.Helpers.Mappers;
 using System.Text;
 using Services.Commons.Gmail;
 using Services.Options;
+using Services.Interfaces;
+using Services.Implementations;
+using System.Security.Claims;
 
 
 namespace WebAPI.Extensions
@@ -107,6 +110,7 @@ namespace WebAPI.Extensions
             services.AddScoped<ISubscriptionPackageRepository, SubscriptionPackageRepository>();
             services.AddScoped<ICustomerSubscriptionRepository, CustomerSubscriptionRepository>();
             services.AddScoped<IHealthSurveyRepository, HealthSurveyRepository>();
+            services.AddScoped<IAiRecipeRepository, AiRecipeRepository>();
 
             services.AddScoped<ICurrentUserService, CurrentUserService>();
             services.AddScoped<ITokenService, TokenService>();
@@ -144,6 +148,9 @@ namespace WebAPI.Extensions
             services.AddScoped<ICartService, CartService>();
             services.AddScoped<ICustomerSubscriptionService, CustomerSubscriptionService>();
             services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();
+               services.AddScoped<IImageSearchService, ImageSearchService>();
+               services.AddScoped<IAiMenuService, AiMenuService>();
+               services.AddScoped<IGiftBoxService, GiftBoxService>();
             //services.AddScoped<IHealthSurveyService, HealthSurveyService>();
             services.AddHttpClient<ChatBoxAI.Services.IGeminiService, ChatBoxAI.Services.GeminiService>();
             services.Configure<ChatBoxAI.Options.GeminiOptions>(

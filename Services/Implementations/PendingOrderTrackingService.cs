@@ -1,4 +1,5 @@
 using BusinessObjects;
+using Repositories.Interfaces;
 using Services.Commons.Gmail;
 using Services.Interfaces;
 using System;
@@ -10,18 +11,20 @@ namespace Services.Implementations
     public class PendingOrderTrackingService : IPendingOrderTrackingService
     {
         private readonly IEXEGmailService _emailService;
+        private readonly ICurrentTime _currentTime;
         private static readonly ConcurrentDictionary<Guid, DateTime> _pendingOrders = new ConcurrentDictionary<Guid, DateTime>();
         private static readonly ConcurrentDictionary<Guid, bool> _alertedOrders = new ConcurrentDictionary<Guid, bool>();
         private static readonly TimeSpan PENDING_THRESHOLD = TimeSpan.FromHours(24); // Ngưỡng 24 giờ
 
-        public PendingOrderTrackingService(IEXEGmailService emailService)
+        public PendingOrderTrackingService(IEXEGmailService emailService, ICurrentTime currentTime)
         {
             _emailService = emailService;
+            _currentTime = currentTime;
         }
 
         public void TrackPendingOrder(Guid orderId)
         {
-            _pendingOrders.AddOrUpdate(orderId, DateTime.UtcNow, (key, value) => value);
+            _pendingOrders.AddOrUpdate(orderId, _currentTime.GetVietnamTime(), (key, value) => value);
         }
 
         public void RemovePendingOrder(Guid orderId)
@@ -32,7 +35,7 @@ namespace Services.Implementations
 
         public async Task CheckAndSendPendingAlertsAsync()
         {
-            var now = DateTime.UtcNow;
+            var now = _currentTime.GetVietnamTime();
             var ordersToAlert = new List<(Guid orderId, TimeSpan pendingTime)>();
 
             foreach (var kvp in _pendingOrders)
@@ -76,7 +79,7 @@ namespace Services.Implementations
         {
             if (_pendingOrders.TryGetValue(orderId, out var startTime))
             {
-                return DateTime.UtcNow - startTime;
+                return _currentTime.GetVietnamTime() - startTime;
             }
             return null;
         }

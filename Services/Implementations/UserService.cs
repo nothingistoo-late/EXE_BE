@@ -25,6 +25,7 @@ namespace Services.Implementations
         private readonly string _confirmEmailUri;
         private readonly string _resetPasswordUri;
         private readonly IUserRepository _userRepository;
+        private readonly ICurrentTime _currentTime;
 
         public UserService(
             UserManager<User> userManager,
@@ -34,7 +35,8 @@ namespace Services.Implementations
             ILogger<UserService> logger,
             IUserEmailService userEmailService,
             IConfiguration configuration,
-            IUserRepository userRepository)
+            IUserRepository userRepository,
+            ICurrentTime currentTime)
         {
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
             _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
@@ -44,6 +46,7 @@ namespace Services.Implementations
             _userEmailService = userEmailService ?? throw new ArgumentNullException(nameof(userEmailService));
             //_resetPasswordUri = configuration["Frontend:ResetPasswordUri"] ?? throw new ArgumentNullException(nameof(configuration), "ResetPasswordUri is missing");
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+            _currentTime = currentTime ?? throw new ArgumentNullException(nameof(currentTime));
         }
 
         //public async Task<ApiResult<UserResponse>> RegisterAsync(UserRegisterRequest req)
@@ -371,7 +374,7 @@ namespace Services.Implementations
             {
                 // 1. Cập nhật thông tin user
                 UserMappings.ApplyUpdate(req, user);
-                user.UpdatedAt = DateTime.UtcNow;
+                user.UpdatedAt = _currentTime.GetVietnamTime();
 
                 // 2. Cập nhật role
                 if (req.Roles?.Any() == true && _currentUserService.IsAdmin())
@@ -404,7 +407,7 @@ namespace Services.Implementations
             return await _unitOfWork.ExecuteTransactionAsync(async () =>
             {
                 UserMappings.ApplyUpdate(req, user);
-                user.UpdatedAt = DateTime.UtcNow;
+                user.UpdatedAt = _currentTime.GetVietnamTime();
 
                 var upd = await _userManager.UpdateAsync(user);
                 if (!upd.Succeeded)

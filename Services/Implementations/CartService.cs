@@ -93,7 +93,11 @@ namespace Services.Implementations
                         Status = OrderStatus.Cart,
                         TotalPrice = 0,
                         FinalPrice = 0,
-                        OrderDetails = new List<OrderDetail>()
+                        OrderDetails = new List<OrderDetail>(),
+                        CreatedAt = _currentTime.GetVietnamTime(),
+                        UpdatedAt = _currentTime.GetVietnamTime(),
+                        CreatedBy = _currentUserService.GetUserId() ?? Guid.Empty,
+                        UpdatedBy = _currentUserService.GetUserId() ?? Guid.Empty
                     };
 
                     if (isNewCart)
@@ -125,7 +129,11 @@ namespace Services.Implementations
                             OrderId = cart.Id,
                             BoxTypeId = dto.BoxTypeId,
                             Quantity = dto.Quantity,
-                            UnitPrice = box.Price
+                            UnitPrice = box.Price,
+                            CreatedAt = _currentTime.GetVietnamTime(),
+                            UpdatedAt = _currentTime.GetVietnamTime(),
+                            CreatedBy = _currentUserService.GetUserId() ?? Guid.Empty,
+                            UpdatedBy = _currentUserService.GetUserId() ?? Guid.Empty
                         };
 
                         await _unitOfWork.OrderDetailRepository.AddAsync(detail);

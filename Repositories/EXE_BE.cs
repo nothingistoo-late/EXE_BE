@@ -25,6 +25,7 @@ namespace Repositories
         public DbSet<CustomerSubscription> CustomerSubscriptions { get; set; }
         public DbSet<HealthSurvey> HealthSurveys { get; set; }
         public DbSet<SubscriptionPackage> SubscriptionPackages { get; set; }
+        public DbSet<AiRecipe> AiRecipes { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -35,6 +36,30 @@ namespace Repositories
             modelBuilder.Entity<IdentityUserLogin<Guid>>().ToTable("UserLogins");
             modelBuilder.Entity<IdentityRoleClaim<Guid>>().ToTable("RoleClaims");
             modelBuilder.Entity<IdentityUserToken<Guid>>().ToTable("UserTokens");
+
+            // Configure AiRecipe entity
+            modelBuilder.Entity<AiRecipe>(entity =>
+            {
+                entity.ToTable("AiRecipes");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.DishName).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).IsRequired().HasMaxLength(1000);
+                entity.Property(e => e.Ingredients).IsRequired();
+                entity.Property(e => e.Instructions).IsRequired();
+                entity.Property(e => e.EstimatedCookingTime).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.CookingTips).HasMaxLength(500);
+                entity.Property(e => e.ImageUrl).HasMaxLength(500);
+                entity.Property(e => e.InputVegetables).IsRequired();
+                entity.Property(e => e.UserId).IsRequired();
+                entity.Property(e => e.AiModel).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.GeneratedAt).IsRequired();
+                
+                // Configure relationship with User
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
         }
     }
 }

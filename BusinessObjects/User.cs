@@ -20,7 +20,7 @@ namespace BusinessObjects
         public bool IsFirstLogin { get; set; } = true; // Mặc định là true, sẽ được set thành false khi người dùng đăng nhập lần đầu tiên
 
         // Audit fields
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; }
 
         // Lưu Guid của User đã tạo
         public Guid CreatedBy { get; set; }

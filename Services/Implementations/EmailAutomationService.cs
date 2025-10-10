@@ -13,17 +13,20 @@ namespace Services.Implementations
         private readonly IGenericRepository<Order, Guid> _orderRepository;
         private readonly IGenericRepository<OrderDetail, Guid> _orderDetailRepository;
         private readonly ILogger<EmailAutomationService> _logger;
+        private readonly ICurrentTime _currentTime;
 
         public EmailAutomationService(
             IEXEGmailService emailService,
             IGenericRepository<Order, Guid> orderRepository,
             IGenericRepository<OrderDetail, Guid> orderDetailRepository,
-            ILogger<EmailAutomationService> logger)
+            ILogger<EmailAutomationService> logger,
+            ICurrentTime currentTime)
         {
             _emailService = emailService;
             _orderRepository = orderRepository;
             _orderDetailRepository = orderDetailRepository;
             _logger = logger;
+            _currentTime = currentTime;
         }
 
         // ========== EMAIL TỰ ĐỘNG CHO ĐƠN HÀNG ==========
@@ -296,12 +299,12 @@ namespace Services.Implementations
                 var pendingOrders = await _orderRepository.GetAllAsync();
                 var overdueOrders = pendingOrders.Where(o => 
                     o.Status == OrderStatus.Pending && 
-                    DateTime.UtcNow - o.CreatedAt > TimeSpan.FromHours(2)
+                    _currentTime.GetVietnamTime() - o.CreatedAt > TimeSpan.FromHours(2)
                 ).ToList();
 
                 foreach (var order in overdueOrders)
                 {
-                    var pendingTime = DateTime.UtcNow - order.CreatedAt;
+                    var pendingTime = _currentTime.GetVietnamTime() - order.CreatedAt;
                     await SendPendingOrderAlertToAdminAsync(order, pendingTime);
                 }
 

@@ -257,7 +257,7 @@ namespace Services.Implementations
                 if (request.Gender.HasValue)
                     user.Gender = request.Gender.Value; // ví dụ "Male"
 
-                user.UpdatedAt = DateTime.UtcNow;
+                user.UpdatedAt = _currentTime.GetVietnamTime();
                 user.UpdatedBy = userId.Value;
 
                 // --- CUSTOMER ---
@@ -268,7 +268,7 @@ namespace Services.Implementations
                     customer.ImgURL = request.ImgURL;
 
 
-                customer.UpdatedAt = DateTime.UtcNow;
+                customer.UpdatedAt = _currentTime.GetVietnamTime();
                 customer.UpdatedBy = userId.Value;
 
                 await _unitOfWork.CustomerRepository.UpdateAsync(customer);

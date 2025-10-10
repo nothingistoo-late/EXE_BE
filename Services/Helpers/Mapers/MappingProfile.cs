@@ -7,6 +7,9 @@ using DTOs.CustomerSubscriptionRequest.Respond;
 using DTOs.DiscountDTOs.Request;
 using DTOs.DiscountDTOs.Respond;
 using DTOs.OrderDTOs.Respond;
+using DTOs.AiMenuDTOs.Request;
+using DTOs.AiMenuDTOs.Response;
+using BusinessObjects;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -132,6 +135,14 @@ namespace Services.Helpers.Mappers
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
                 .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => src.PaymentStatus.ToString()))
                 .ForMember(dest => dest.PaymentMethod, opt => opt.MapFrom(src => src.PaymentMethod.ToString()));
+
+            // AI Menu Mappings
+            // AiRecipe -> AiRecipeResponse
+            CreateMap<AiRecipe, AiRecipeResponse>()
+                .ForMember(dest => dest.Ingredients, opt => opt.MapFrom(src => 
+                    Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(src.Ingredients) ?? new List<string>()))
+                .ForMember(dest => dest.Instructions, opt => opt.MapFrom(src => 
+                    Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(src.Instructions) ?? new List<string>()));
         }
 
     }

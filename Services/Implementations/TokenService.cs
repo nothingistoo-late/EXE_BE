@@ -6,6 +6,7 @@ using DTOs.UserDTOs.Identities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Repositories.Interfaces;
 using Services.Interfaces;
 
 namespace Services.Implementations
@@ -16,8 +17,9 @@ namespace Services.Implementations
         private readonly SymmetricSecurityKey _secretKey;
         private readonly JwtSettings _jwtSettings;
         private readonly UserManager<User> _userManager;
+        private readonly ICurrentTime _currentTime;
 
-        public TokenService(IOptions<JwtSettings> jwtOptions, UserManager<User> userManager)
+        public TokenService(IOptions<JwtSettings> jwtOptions, UserManager<User> userManager, ICurrentTime currentTime)
         {
             _jwtSettings = jwtOptions?.Value ?? throw new ArgumentNullException(nameof(jwtOptions));
             if (string.IsNullOrEmpty(_jwtSettings.Key))
@@ -25,6 +27,7 @@ namespace Services.Implementations
 
             _secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
+            _currentTime = currentTime ?? throw new ArgumentNullException(nameof(currentTime));
         }
 
         public RefreshTokenInfo GenerateRefreshToken()
@@ -36,7 +39,7 @@ namespace Services.Implementations
             return new RefreshTokenInfo
             {
                 Token = Convert.ToBase64String(randomNumber),
-                Expiry = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenDays)
+                Expiry = _currentTime.GetVietnamTime().AddDays(_jwtSettings.RefreshTokenDays)
             };
         }
 
@@ -65,7 +68,7 @@ namespace Services.Implementations
                 issuer: _jwtSettings.ValidIssuer,
                 audience: _jwtSettings.ValidAudience,
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(_jwtSettings.Expires),
+                expires: _currentTime.GetVietnamTime().AddMinutes(_jwtSettings.Expires),
                 signingCredentials: signingCredentials
             );
         }

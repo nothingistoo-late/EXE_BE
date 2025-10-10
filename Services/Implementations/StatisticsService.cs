@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Repositories;
+using Repositories.Interfaces;
 using Services.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -12,16 +13,34 @@ namespace Services.Implementations
     public class StatisticsService : IStatisticsService
     {
         private readonly EXE_BE _context;
-        public StatisticsService(EXE_BE context)
+        private readonly ICurrentTime _currentTime;
+        
+        public StatisticsService(EXE_BE context, ICurrentTime currentTime)
         {
             _context = context;
+            _currentTime = currentTime;
         }
         public async Task<ApiResult<OrderStatisticsResponse>> GetOrderStatisticsAsync(OrderStatisticsRequest request)
         {
             try
             {
+                // Đảm bảo thời gian query được xử lý đúng timezone
+                // Nếu request.StartDate và EndDate là UTC, convert về Vietnam time để so sánh
+                var startDate = request.StartDate;
+                var endDate = request.EndDate;
+                
+                // Nếu thời gian query không có timezone info, giả định là Vietnam time
+                if (startDate.Kind == DateTimeKind.Unspecified)
+                {
+                    startDate = DateTime.SpecifyKind(startDate, DateTimeKind.Local);
+                }
+                if (endDate.Kind == DateTimeKind.Unspecified)
+                {
+                    endDate = DateTime.SpecifyKind(endDate, DateTimeKind.Local);
+                }
+
                 var query = _context.Orders
-                    .Where(o => o.CreatedAt >= request.StartDate && o.CreatedAt <= request.EndDate)
+                    .Where(o => o.CreatedAt >= startDate && o.CreatedAt <= endDate)
                     .Include(o => o.OrderDetails)
                         .ThenInclude(d => d.BoxType)
                     .Include(o => o.User);

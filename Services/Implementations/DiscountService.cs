@@ -27,7 +27,7 @@ namespace Services.Implementations
             try
             {
                 var discount = await _repository.GetByIdAsync(id);
-                if (discount == null || !discount.IsActive || discount.EndDate < DateTime.UtcNow)
+                if (discount == null || !discount.IsActive || discount.EndDate < _currentTime.GetVietnamTime())
                 {
                     return ApiResult<DiscountRespondDTO>.Failure(
                         new Exception("Không tìm thấy hoặc mã giảm giá đã hết hạn!"));
@@ -50,7 +50,7 @@ namespace Services.Implementations
             {
                 var discounts = await _repository.GetAllAsync();
                 var active = discounts
-                    .Where(x => x.IsActive && x.EndDate >= DateTime.UtcNow)
+                    .Where(x => x.IsActive && x.EndDate >= _currentTime.GetVietnamTime())
                     .ToList();
 
                 var dtoList = _mapper.Map<List<DiscountRespondDTO>>(active);

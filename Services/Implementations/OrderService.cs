@@ -47,8 +47,11 @@ namespace Services.Implementations
                         Status = OrderStatus.Pending,
                         DeliveryMethod = request.DeliveryMethod,
                         PaymentMethod = request.PaymentMethod,
-                        CreatedAt = DateTime.UtcNow,
-                        OrderDetails = new List<OrderDetail>()
+                        OrderDetails = new List<OrderDetail>(),
+                        CreatedAt = _currentTime.GetVietnamTime(),
+                        UpdatedAt = _currentTime.GetVietnamTime(),
+                        CreatedBy = _currentUserService.GetUserId() ?? Guid.Empty,
+                        UpdatedBy = _currentUserService.GetUserId() ?? Guid.Empty
                     };
 
                     foreach (var item in request.Items)
@@ -60,14 +63,19 @@ namespace Services.Implementations
                         if (box == null)
                             return ApiResult<OrderResponse>.Failure(new Exception($"BoxType {item.BoxTypeId} không tìm thấy, xin kiểm tra và hãy thử lại!!"));
 
-                        order.OrderDetails.Add(new OrderDetail
+                        var orderDetail = new OrderDetail
                         {
                             Id = Guid.NewGuid(),
                             OrderId = order.Id,
                             BoxTypeId = item.BoxTypeId,
                             Quantity = item.Quantity,
-                            UnitPrice = box.Price
-                        });
+                            UnitPrice = box.Price,
+                            CreatedAt = _currentTime.GetVietnamTime(),
+                            UpdatedAt = _currentTime.GetVietnamTime(),
+                            CreatedBy = _currentUserService.GetUserId() ?? Guid.Empty,
+                            UpdatedBy = _currentUserService.GetUserId() ?? Guid.Empty
+                        };
+                        order.OrderDetails.Add(orderDetail);
                     }
 
                     order.TotalPrice = order.OrderDetails.Sum(d => d.UnitPrice * d.Quantity);
@@ -244,7 +252,7 @@ namespace Services.Implementations
                     try
                     {
                         order.Status = status;
-                        order.UpdatedAt = DateTime.UtcNow;
+                        order.UpdatedAt = _currentTime.GetVietnamTime();
                         
                         // Nếu trạng thái được cập nhật thành Paid, đánh dấu đã thanh toán
                         if (status == OrderStatus.Completed)
