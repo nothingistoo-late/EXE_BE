@@ -15,5 +15,13 @@
     public enum CustomerSubscriptionStatus { Inactive, Active}
     public enum PaymentStatus { Pending, Paid, Failed }
 
+    public enum NotificationType 
+    { 
+        Info, 
+        Warning, 
+        Success, 
+        Error 
+    }
+
 }
 

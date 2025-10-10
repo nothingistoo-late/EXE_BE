@@ -9,6 +9,8 @@ using DTOs.DiscountDTOs.Respond;
 using DTOs.OrderDTOs.Respond;
 using DTOs.AiMenuDTOs.Request;
 using DTOs.AiMenuDTOs.Response;
+using DTOs.NotificationDTOs.Request;
+using DTOs.NotificationDTOs.Response;
 using BusinessObjects;
 using System;
 using System.Collections.Generic;
@@ -143,6 +145,37 @@ namespace Services.Helpers.Mappers
                     Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(src.Ingredients) ?? new List<string>()))
                 .ForMember(dest => dest.Instructions, opt => opt.MapFrom(src => 
                     Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(src.Instructions) ?? new List<string>()));
+
+            // Notification Mappings
+            // Notification -> UserNotificationResponse (simplified for users)
+            CreateMap<Notification, UserNotificationResponse>()
+                .ForMember(dest => dest.SenderName, opt => opt.MapFrom(src => 
+                    (src.Sender.FirstName ?? "") + " " + (src.Sender.LastName ?? "")))
+                .ForMember(dest => dest.IsBroadcast, opt => opt.MapFrom(src => src.ReceiverId == null))
+                .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.Type.ToString()));
+
+            // Notification -> AdminNotificationResponse (full details for admin)
+            CreateMap<Notification, AdminNotificationResponse>()
+                .ForMember(dest => dest.SenderName, opt => opt.MapFrom(src => 
+                    (src.Sender.FirstName ?? "") + " " + (src.Sender.LastName ?? "")))
+                .ForMember(dest => dest.ReceiverName, opt => opt.MapFrom(src => 
+                    src.Receiver != null ? (src.Receiver.FirstName ?? "") + " " + (src.Receiver.LastName ?? "") : null))
+                .ForMember(dest => dest.IsBroadcast, opt => opt.MapFrom(src => src.ReceiverId == null))
+                .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.Type.ToString()));
+
+            // Notification -> SendToUserNotificationResponse
+            CreateMap<Notification, SendToUserNotificationResponse>()
+                .ForMember(dest => dest.ReceiverName, opt => opt.MapFrom(src => 
+                    src.Receiver != null ? (src.Receiver.FirstName ?? "") + " " + (src.Receiver.LastName ?? "") : ""))
+                .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.Type.ToString()));
+
+            // Notification -> SendToMultipleUsersNotificationResponse
+            CreateMap<Notification, SendToMultipleUsersNotificationResponse>()
+                .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.Type.ToString()));
+
+            // Notification -> SendBroadcastNotificationResponse
+            CreateMap<Notification, SendBroadcastNotificationResponse>()
+                .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.Type.ToString()));
         }
 
     }

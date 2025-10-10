@@ -26,6 +26,8 @@ namespace Repositories
         public DbSet<HealthSurvey> HealthSurveys { get; set; }
         public DbSet<SubscriptionPackage> SubscriptionPackages { get; set; }
         public DbSet<AiRecipe> AiRecipes { get; set; }
+        public DbSet<GiftBoxOrder> GiftBoxOrders { get; set; }  
+        public DbSet<Notification> Notifications { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -59,6 +61,36 @@ namespace Repositories
                     .WithMany()
                     .HasForeignKey(e => e.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configure Notification entity
+            modelBuilder.Entity<Notification>(entity =>
+            {
+                entity.ToTable("Notifications");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Content).IsRequired().HasMaxLength(1000);
+                entity.Property(e => e.Type).IsRequired();
+                entity.Property(e => e.SenderId).IsRequired();
+                entity.Property(e => e.ReceiverId).IsRequired(false);
+                entity.Property(e => e.IsRead).IsRequired();
+                entity.Property(e => e.CreatedAt).IsRequired();
+                entity.Property(e => e.UpdatedAt).IsRequired();
+                entity.Property(e => e.CreatedBy).IsRequired();
+                entity.Property(e => e.UpdatedBy).IsRequired();
+                entity.Property(e => e.IsDeleted).IsRequired();
+                
+                // Configure relationship with Sender (User)
+                entity.HasOne(e => e.Sender)
+                    .WithMany()
+                    .HasForeignKey(e => e.SenderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                // Configure relationship with Receiver (User)
+                entity.HasOne(e => e.Receiver)
+                    .WithMany()
+                    .HasForeignKey(e => e.ReceiverId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

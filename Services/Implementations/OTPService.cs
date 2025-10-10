@@ -42,10 +42,10 @@ namespace Services.Implementations
 
             _otpStorage.AddOrUpdate(key, otpData, (k, v) => otpData);
             
-            // Debug logging
-            Console.WriteLine($"DEBUG: Generated OTP for key: {key}, code: {otpCode}");
-            Console.WriteLine($"DEBUG: Available keys after generation: {string.Join(", ", _otpStorage.Keys)}");
-            Console.WriteLine($"DEBUG: OTP expires at: {expiryTime}");
+            // Debug logging (remove in production)
+            // Console.WriteLine($"DEBUG: Generated OTP for key: {key}, code: {otpCode}");
+            // Console.WriteLine($"DEBUG: Available keys after generation: {string.Join(", ", _otpStorage.Keys)}");
+            // Console.WriteLine($"DEBUG: OTP expires at: {expiryTime}");
 
             // Don't cleanup immediately after generation
             // await CleanupExpiredOTPsAsync();

@@ -3,9 +3,9 @@ using BusinessObjects;
 using DTOs.AiMenuDTOs.Response;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using Repositories.Helpers;
 using Repositories.Interfaces;
 using Repositories.WorkSeeds.Implements;
+using System.Linq.Expressions;
 
 namespace Repositories.Implements
 {
@@ -18,68 +18,60 @@ namespace Repositories.Implements
             _mapper = mapper;
         }
 
-        public async Task<PagedList<AiRecipeResponse>> GetUserRecipesAsync(
+        public async Task<List<AiRecipeResponse>> GetUserRecipesAsync(
             Guid userId,
-            int pageNumber,
-            int pageSize,
+            int count,
             string? searchTerm = null,
             DateTime? fromDate = null,
             DateTime? toDate = null)
         {
-            var query = _context.AiRecipes
-                .Where(r => r.UserId == userId && !r.IsDeleted);
+            // Build predicate for filtering
+            Expression<Func<AiRecipe, bool>> predicate = r => r.UserId == userId && !r.IsDeleted;
 
-            // Apply search filter
+            // Add additional filters
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
-                query = query.Where(r => r.DishName.Contains(searchTerm));
+                predicate = CombinePredicates(predicate, r => r.DishName.Contains(searchTerm));
             }
 
-            // Apply date filters
             if (fromDate.HasValue)
             {
-                query = query.Where(r => r.GeneratedAt >= fromDate.Value);
+                predicate = CombinePredicates(predicate, r => r.GeneratedAt >= fromDate.Value);
             }
 
             if (toDate.HasValue)
             {
-                query = query.Where(r => r.GeneratedAt <= toDate.Value);
+                predicate = CombinePredicates(predicate, r => r.GeneratedAt <= toDate.Value);
             }
 
-            // Order by most recent first
-            query = query.OrderByDescending(r => r.GeneratedAt);
+            // Get recipes with limit
+            var recipes = await GetAllAsync(
+                predicate,
+                q => q.OrderByDescending(r => r.GeneratedAt));
 
-            var totalCount = await query.CountAsync();
-            var recipes = await query
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
-            var recipeResponses = _mapper.Map<List<AiRecipeResponse>>(recipes);
-            return new PagedList<AiRecipeResponse>(recipeResponses, totalCount, pageNumber, pageSize);
+            // Map to response DTOs and apply limit
+            var mappedRecipes = _mapper.Map<List<AiRecipeResponse>>(recipes);
+            return mappedRecipes.Take(count).ToList();
         }
 
         public async Task<List<AiRecipeResponse>> GetRecentRecipesAsync(Guid userId, int count = 5)
         {
-            var recipes = await _context.AiRecipes
-                .Where(r => r.UserId == userId && !r.IsDeleted)
-                .OrderByDescending(r => r.GeneratedAt)
-                .Take(count)
-                .ToListAsync();
+            var recipes = await GetAllAsync(
+                r => r.UserId == userId && !r.IsDeleted,
+                q => q.OrderByDescending(r => r.GeneratedAt));
 
-            return _mapper.Map<List<AiRecipeResponse>>(recipes);
+            var mappedRecipes = _mapper.Map<List<AiRecipeResponse>>(recipes);
+            return mappedRecipes.Take(count).ToList();
         }
 
         public async Task<bool> UserHasRecipesAsync(Guid userId)
         {
-            return await _context.AiRecipes
-                .AnyAsync(r => r.UserId == userId && !r.IsDeleted);
+            return await AnyAsync(r => r.UserId == userId && !r.IsDeleted);
         }
 
         public async Task<int> GetUserRecipeCountAsync(Guid userId)
         {
-            return await _context.AiRecipes
-                .CountAsync(r => r.UserId == userId && !r.IsDeleted);
+            return await CountAsync(r => r.UserId == userId && !r.IsDeleted);
         }
 
         public async Task<List<AiRecipeResponse>> GetRecipesByVegetablesAsync(
@@ -105,6 +97,20 @@ namespace Repositories.Implements
                 .ToList();
 
             return _mapper.Map<List<AiRecipeResponse>>(matchingRecipes);
+        }
+
+        /// <summary>
+        /// Helper method to combine two predicates using AND logic
+        /// </summary>
+        private static Expression<Func<AiRecipe, bool>> CombinePredicates(
+            Expression<Func<AiRecipe, bool>> predicate1,
+            Expression<Func<AiRecipe, bool>> predicate2)
+        {
+            var parameter = Expression.Parameter(typeof(AiRecipe), "r");
+            var left = Expression.Invoke(predicate1, parameter);
+            var right = Expression.Invoke(predicate2, parameter);
+            var combined = Expression.AndAlso(left, right);
+            return Expression.Lambda<Func<AiRecipe, bool>>(combined, parameter);
         }
     }
 }

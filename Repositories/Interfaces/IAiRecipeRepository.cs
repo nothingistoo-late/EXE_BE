@@ -1,16 +1,14 @@
 using BusinessObjects;
 using DTOs.AiMenuDTOs.Response;
-using Repositories.Helpers;
 using Repositories.WorkSeeds.Interfaces;
 
 namespace Repositories.Interfaces
 {
     public interface IAiRecipeRepository : IGenericRepository<AiRecipe, Guid>
     {
-        Task<PagedList<AiRecipeResponse>> GetUserRecipesAsync(
+        Task<List<AiRecipeResponse>> GetUserRecipesAsync(
             Guid userId,
-            int pageNumber,
-            int pageSize,
+            int count,
             string? searchTerm = null,
             DateTime? fromDate = null,
             DateTime? toDate = null);

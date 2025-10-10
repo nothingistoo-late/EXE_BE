@@ -85,7 +85,7 @@ namespace Services.Implementations
             {
                 // Tạo search term phù hợp cho Unsplash
                 var cleanSearchTerm = CleanSearchTerm(searchTerm);
-                var searchUrl = $"https://api.unsplash.com/search/photos?query={Uri.EscapeDataString(cleanSearchTerm)}&per_page=1&client_id=YOUR_ACCESS_KEY";
+                var searchUrl = $"https://api.unsplash.com/search/photos?query={Uri.EscapeDataString(cleanSearchTerm)}&per_page=1&client_id=PLACEHOLDER_ACCESS_KEY";
                 
                 // Note: Cần Unsplash Access Key để sử dụng API
                 // Tạm thời return null để dùng fallback

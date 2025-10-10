@@ -97,24 +97,14 @@ namespace Services.Implementations
                     return ApiResult<GetUserRecipesResponse>.Failure(new UnauthorizedAccessException("User not authenticated"));
                 }
 
-                var pagedRecipes = await _aiRecipeRepository.GetUserRecipesAsync(
+                var recipes = await _aiRecipeRepository.GetUserRecipesAsync(
                     currentUserId.Value,
-                    request.PageNumber,
-                    request.PageSize,
+                    request.Count,
                     request.SearchTerm,
                     request.FromDate,
                     request.ToDate);
 
-                var response = new GetUserRecipesResponse
-                {
-                    Recipes = pagedRecipes.ToList(),
-                    TotalCount = pagedRecipes.MetaData.TotalCount,
-                    TotalPages = pagedRecipes.MetaData.TotalPages,
-                    CurrentPage = pagedRecipes.MetaData.CurrentPage,
-                    PageSize = pagedRecipes.MetaData.PageSize,
-                    HasNextPage = pagedRecipes.MetaData.CurrentPage < pagedRecipes.MetaData.TotalPages,
-                    HasPreviousPage = pagedRecipes.MetaData.CurrentPage > 1
-                };
+                var response = new GetUserRecipesResponse(recipes);
 
                 return ApiResult<GetUserRecipesResponse>.Success(response, "User recipes retrieved successfully");
             }
