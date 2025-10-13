@@ -34,7 +34,7 @@ namespace WebAPI.Extensions
             services.AddCors(opt =>
             {
                 opt.AddPolicy("CorsPolicy", b => b
-                    .WithOrigins("vegie.site")
+                    .WithOrigins("https://www.vegie.site")
                     .AllowAnyMethod()
                     .AllowAnyHeader());
             });
