@@ -1,4 +1,5 @@
 using DTOs.Gemini;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
 using System.Threading;
@@ -8,6 +9,7 @@ namespace WebAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class AIController : ControllerBase
     {
         private readonly IAIService _aiService;

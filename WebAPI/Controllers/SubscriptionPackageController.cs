@@ -5,6 +5,8 @@ namespace WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
+
     public class SubscriptionPackageController : Controller
     {
         private readonly ISubscriptionPackageService _subscriptionPackageService;

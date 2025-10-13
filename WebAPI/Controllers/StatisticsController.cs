@@ -1,9 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace WebAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
+
     public class StatisticsController : Controller
     {
         private readonly IStatisticsService _statisticsService;
@@ -12,6 +15,7 @@ namespace WebAPI.Controllers
             _statisticsService = statisticsService;
         }
         [HttpGet]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> GetStatistics([FromQuery] DateTime start, [FromQuery] DateTime end)
         {
             var request = new OrderStatisticsRequest

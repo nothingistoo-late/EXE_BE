@@ -1,8 +1,11 @@
 ﻿using DTOs.DiscountDTOs.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize]
+
 public class DiscountsController : ControllerBase
 {
     private readonly IDiscountService _discountService;
@@ -29,6 +32,10 @@ public class DiscountsController : ControllerBase
     }
 
     // POST: api/discounts
+
+
+    [Authorize(Roles = "ADMIN")]
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] DiscountCreateDTO dto)
     {
@@ -37,6 +44,7 @@ public class DiscountsController : ControllerBase
         var result = await _discountService.CreateDiscountAsync(dto);
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
+    [Authorize(Roles = "ADMIN")]
 
     // PUT: api/discounts/{id}
     [HttpPut("{id}")]
@@ -47,6 +55,7 @@ public class DiscountsController : ControllerBase
         var result = await _discountService.UpdateDiscountAsync(id, dto);
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
+    [Authorize(Roles = "ADMIN")]
 
     // DELETE: api/discounts/{id}
     [HttpDelete("{id}")]

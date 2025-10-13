@@ -1,5 +1,6 @@
 ﻿using DTOs.OrderDTOs.Request;
 using DTOs.OrderDTOs.Respond;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
 
@@ -7,6 +8,8 @@ namespace API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
+
     public class OrdersController : ControllerBase
     {
         private readonly IOrderService _orderService;
@@ -40,6 +43,8 @@ namespace API.Controllers
         /// Get all orders
         /// </summary>
         [HttpGet]
+        [Authorize(Roles = "ADMIN")]
+
         public async Task<IActionResult> GetAllOrders()
         {
             var result = await _orderService.GetAllOrderAsync();
@@ -69,6 +74,8 @@ namespace API.Controllers
         /// Batch update order status
         /// </summary>
         [HttpPut("status")]
+        [Authorize(Roles = "ADMIN")]
+
         public async Task<IActionResult> UpdateOrderStatus([FromBody] UpdateOrderStatusRequest request)
         {
             var result = await _orderService.UpdateOrderStatusAsync(request.OrderIds, request.Status);

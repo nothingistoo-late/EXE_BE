@@ -1,11 +1,14 @@
 ﻿using DTOs;
 using DTOs.Customer.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
+
     public class CustomersController : Controller
     {
         private readonly ICustomerService _customerService;
@@ -19,6 +22,7 @@ namespace WebAPI.Controllers
         /// Lấy tất cả khách hàng (chưa bị xóa mềm)
         /// </summary>
         [HttpGet]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> GetAllCustomers()
         {
             var result = await _customerService.GetAllCustomersAsync();
@@ -42,6 +46,8 @@ namespace WebAPI.Controllers
         /// Lấy thông tin khách hàng theo Id
         /// </summary>
         [HttpGet("{id}")]
+        [Authorize(Roles = "ADMIN")]
+
         public async Task<IActionResult> GetCustomerById(Guid id)
         {
             var result = await _customerService.GetCustomerByIdAsync(id);
@@ -54,6 +60,8 @@ namespace WebAPI.Controllers
         /// Xóa mềm khách hàng
         /// </summary>
         [HttpDelete("{id}")]
+        [Authorize(Roles = "ADMIN")]
+
         public async Task<IActionResult> SoftDeleteCustomer(Guid id)
         {
             var result = await _customerService.SoftDeleteCustomerById(id);

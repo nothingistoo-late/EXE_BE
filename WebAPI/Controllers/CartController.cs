@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Services.Interfaces;
-using DTOs.CartDTOs.Request;
+﻿using DTOs.CartDTOs.Request;
 using DTOs.CartDTOs.Respond;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Services.Interfaces;
 using System;
 using System.Threading.Tasks;
 
@@ -9,6 +10,8 @@ namespace API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
+
     public class CartController : ControllerBase
     {
         private readonly ICartService _cartService;

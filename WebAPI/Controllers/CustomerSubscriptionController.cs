@@ -1,10 +1,13 @@
 ﻿using DTOs.CustomerSubscriptionRequest.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
+
     public class CustomerSubscriptionController : Controller
     {
 
@@ -50,6 +53,8 @@ namespace WebAPI.Controllers
 
         // Cập nhật trạng thái
         [HttpPut("{subscriptionId:guid}/status")]
+        [Authorize(Roles = "ADMIN")]
+
         public async Task<IActionResult> UpdateStatus(Guid subscriptionId)
         {
             var result = await _service.UpdateStatusSubscriptionAsync(subscriptionId);
@@ -57,12 +62,15 @@ namespace WebAPI.Controllers
         }
 
         [HttpPut("mark-paid")]
+        [Authorize(Roles = "ADMIN")]
+
         public async Task<IActionResult> MarkPaid([FromBody] List<Guid> subscriptionIds)
         {
             var result = await _service.MarkPaidSubscriptionsAsync(subscriptionIds);
             return Ok(result);
         }
 
+        [Authorize(Roles = "ADMIN")]
         [HttpPut("mark-unpaid")]
         public async Task<IActionResult> MarkUnPaid([FromBody] List<Guid> subscriptionIds)
         {
