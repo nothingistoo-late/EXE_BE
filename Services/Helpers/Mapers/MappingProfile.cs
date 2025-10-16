@@ -105,6 +105,7 @@ namespace Services.Helpers.Mappers
             CreateMap<Order, OrderResponse>()
                 .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId)) // giả sử Order có CustomerId
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+                .ForMember(dest => dest.OrderDate, opt => opt.MapFrom(src => src.CreatedAt))
                 .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.OrderDetails));
 
             // Map OrderDetail -> OrderDetailResponse
