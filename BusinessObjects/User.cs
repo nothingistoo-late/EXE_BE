@@ -32,5 +32,7 @@ namespace BusinessObjects
 
         public bool IsDeleted { get; set; }
 
+        // Navigation properties
+        public virtual ICollection<UserDiscount> UserDiscounts { get; set; } = new List<UserDiscount>();
     }
 }

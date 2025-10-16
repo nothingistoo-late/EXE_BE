@@ -28,6 +28,7 @@ namespace Repositories
         public DbSet<AiRecipe> AiRecipes { get; set; }
         public DbSet<GiftBoxOrder> GiftBoxOrders { get; set; }  
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<UserDiscount> UserDiscounts { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -91,6 +92,33 @@ namespace Repositories
                     .WithMany()
                     .HasForeignKey(e => e.ReceiverId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Configure UserDiscount entity
+            modelBuilder.Entity<UserDiscount>(entity =>
+            {
+                entity.ToTable("UserDiscounts");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.UserId).IsRequired();
+                entity.Property(e => e.DiscountId).IsRequired();
+                entity.Property(e => e.UsedAt).IsRequired();
+                
+                // Configure relationship with User
+                entity.HasOne(e => e.User)
+                    .WithMany(u => u.UserDiscounts)
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                
+                // Configure relationship with Discount
+                entity.HasOne(e => e.Discount)
+                    .WithMany(d => d.UserDiscounts)
+                    .HasForeignKey(e => e.DiscountId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                
+                // Create unique index to prevent duplicate usage
+                entity.HasIndex(e => new { e.UserId, e.DiscountId })
+                    .IsUnique()
+                    .HasDatabaseName("IX_UserDiscounts_UserId_DiscountId");
             });
         }
     }

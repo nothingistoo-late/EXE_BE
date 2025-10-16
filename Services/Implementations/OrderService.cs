@@ -85,17 +85,40 @@ namespace Services.Implementations
                     {
                         order.DiscountCode = request.DiscountCode;
                         var discount = await _unitOfWork.DiscountRepository
-                            .FirstOrDefaultAsync(d => d.Code == request.DiscountCode && d.IsActive);
+                            .GetActiveDiscountByCodeAsync(request.DiscountCode);
 
                         if (discount == null)
                             return ApiResult<OrderResponse>.Failure(new Exception("Mã giảm giá không tồn tại hoặc đã hết hạn!!"));
 
+                        // Check if user has already used this discount
+                        var hasUsedDiscount = await _unitOfWork.UserDiscountRepository
+                            .HasUserUsedDiscountAsync(request.UserId, discount.Id);
+
+                        if (hasUsedDiscount)
+                            return ApiResult<OrderResponse>.Failure(new Exception("Bạn đã sử dụng mã giảm giá này rồi, hãy thử mã khác nhé!!"));
+
+                        // Apply discount
                         order.FinalPrice = discount.IsPercentage
                             ? order.TotalPrice * (1 - discount.DiscountValue / 100)
                             : order.TotalPrice - discount.DiscountValue;
 
                         if (order.FinalPrice < 0)
                             order.FinalPrice = 0;
+
+                        // Create UserDiscount record
+                        var userDiscount = new UserDiscount
+                        {
+                            Id = Guid.NewGuid(),
+                            UserId = request.UserId,
+                            DiscountId = discount.Id,
+                            UsedAt = _currentTime.GetVietnamTime(),
+                            CreatedAt = _currentTime.GetVietnamTime(),
+                            UpdatedAt = _currentTime.GetVietnamTime(),
+                            CreatedBy = _currentUserService.GetUserId() ?? Guid.Empty,
+                            UpdatedBy = _currentUserService.GetUserId() ?? Guid.Empty
+                        };
+
+                        await _unitOfWork.UserDiscountRepository.AddAsync(userDiscount);
                     }
 
                     await _unitOfWork.OrderRepository.AddAsync(order);

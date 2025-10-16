@@ -8,5 +8,7 @@ namespace Repositories.Interfaces
 {
     public interface IDiscountRepository : IGenericRepository<Discount, Guid>
     {
+        Task<Discount?> GetActiveDiscountByCodeAsync(string code);
+        Task<List<Discount>> GetAllActiveDiscountsAsync();
     }
 }

@@ -114,6 +114,7 @@ namespace WebAPI.Extensions
             services.AddScoped<IHealthSurveyRepository, HealthSurveyRepository>();
             services.AddScoped<IAiRecipeRepository, AiRecipeRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped<IUserDiscountRepository, UserDiscountRepository>();
 
             services.AddScoped<ICurrentUserService, CurrentUserService>();
             services.AddScoped<ITokenService, TokenService>();
