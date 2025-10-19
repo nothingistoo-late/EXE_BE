@@ -109,6 +109,7 @@ namespace Services.Implementations
                                 PaymentUrl = dataElement.TryGetProperty("checkoutUrl", out var url) ? url.GetString() ?? "" : "",
                                 Amount = dataElement.TryGetProperty("amount", out var responseAmount) ? responseAmount.GetInt32() : request.Amount,
                                 Description = dataElement.TryGetProperty("description", out var desc) ? desc.GetString() ?? "" : request.Description,
+                                OrderCode = orderCode, // Trả về OrderCode đã tạo
                                 Status = "ACTIVE"
                             };
 

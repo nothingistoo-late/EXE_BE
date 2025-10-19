@@ -34,7 +34,24 @@ namespace WebAPI.Controllers
             return Ok(new { 
                 message = "PayOS Webhook is working!", 
                 timestamp = DateTime.UtcNow,
-                status = "active"
+                status = "active",
+                webhookUrl = $"{Request.Scheme}://{Request.Host}{Request.Path}",
+                environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown"
+            });
+        }
+
+        [HttpGet("webhook-info")]
+        public IActionResult GetWebhookInfo()
+        {
+            var webhookUrl = $"{Request.Scheme}://{Request.Host}/api/payos/webhook";
+            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown";
+            
+            return Ok(new {
+                webhookUrl = webhookUrl,
+                environment = environment,
+                timestamp = DateTime.UtcNow,
+                status = "active",
+                message = "Use this URL as your PayOS webhook URL"
             });
         }
 
@@ -74,6 +91,146 @@ namespace WebAPI.Controllers
                 message = "Simulation completed - check logs for details",
                 simulated = simulatedData
             });
+        }
+
+        [HttpGet("find-order/{orderCode}")]
+        public async Task<IActionResult> FindOrderByPayOSOrderCode(string orderCode)
+        {
+            try
+            {
+                _logger.LogInformation("=== FINDING ORDER BY PAYOS ORDER CODE: {OrderCode} ===", orderCode);
+                
+                var result = await _orderService.FindOrderByPayOSOrderCodeAsync(orderCode);
+                
+                return Ok(new { 
+                    message = "Order search completed",
+                    orderCode = orderCode,
+                    result = result.IsSuccess ? "SUCCESS" : "FAILED",
+                    data = result.Data,
+                    message_detail = result.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error finding order by PayOSOrderCode: {OrderCode}", orderCode);
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("verify-payment-flow/{orderId}")]
+        public async Task<IActionResult> VerifyPaymentFlow(Guid orderId)
+        {
+            try
+            {
+                _logger.LogInformation("=== VERIFYING PAYMENT FLOW FOR ORDER {OrderId} ===", orderId);
+                
+                var result = await _orderService.VerifyOrderPaymentFlowAsync(orderId);
+                
+                return Ok(new { 
+                    message = "Payment flow verification completed",
+                    orderId = orderId,
+                    result = result.IsSuccess ? "SUCCESS" : "FAILED",
+                    message_detail = result.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error verifying payment flow for order {OrderId}", orderId);
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("debug-order/{orderId}")]
+        public async Task<IActionResult> DebugOrder(Guid orderId)
+        {
+            try
+            {
+                _logger.LogInformation("=== DEBUGGING ORDER {OrderId} ===", orderId);
+                
+                var result = await _orderService.GetOrderByIdForDebugAsync(orderId);
+                
+                return Ok(new { 
+                    message = "Order debug completed",
+                    orderId = orderId,
+                    result = result.IsSuccess ? "SUCCESS" : "FAILED",
+                    data = result.Data,
+                    message_detail = result.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in order debug for {OrderId}", orderId);
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("test-webhook/{orderId}")]
+        public async Task<IActionResult> TestWebhookForOrder(Guid orderId)
+        {
+            try
+            {
+                _logger.LogInformation("=== TESTING WEBHOOK FOR ORDER {OrderId} ===", orderId);
+                
+                // Lấy thông tin order
+                var orderResult = await _orderService.GetOrderByIdForDebugAsync(orderId);
+                if (!orderResult.IsSuccess)
+                {
+                    return BadRequest(new { error = "Order not found", orderId = orderId });
+                }
+                
+                var order = orderResult.Data;
+                if (string.IsNullOrEmpty(order.PayOSOrderCode))
+                {
+                    return BadRequest(new { error = "Order does not have PayOSOrderCode", orderId = orderId });
+                }
+                
+                // Tạo webhook payload giả
+                var testWebhookData = new
+                {
+                    Code = "00",
+                    Desc = "success",
+                    Success = true,
+                    Data = new
+                    {
+                        OrderCode = long.Parse(order.PayOSOrderCode),
+                        Amount = (int)order.FinalPrice,
+                        Description = $"Payment for Order {order.Id}",
+                        Reference = "TEST_REF_" + Guid.NewGuid().ToString("N")[..8],
+                        TransactionDateTime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
+                        Currency = "VND",
+                        Status = "PAID"
+                    },
+                    Signature = "test_signature_" + Guid.NewGuid().ToString("N")[..16]
+                };
+                
+                _logger.LogInformation("Testing webhook with PayOSOrderCode: {PayOSOrderCode}", order.PayOSOrderCode);
+                
+                // Gọi method xử lý webhook
+                var result = await _orderService.UpdateOrderStatusByOrderCodeAsync(
+                    order.PayOSOrderCode, 
+                    BusinessObjects.Common.OrderStatus.Completed
+                );
+                
+                _logger.LogInformation("Webhook test result: {Result}", result.IsSuccess ? "SUCCESS" : "FAILED");
+                if (!result.IsSuccess)
+                {
+                    _logger.LogWarning("Webhook test failed: {Message}", result.Message);
+                }
+                
+                return Ok(new { 
+                    message = "Webhook test completed",
+                    orderId = orderId,
+                    payOSOrderCode = order.PayOSOrderCode,
+                    result = result.IsSuccess ? "SUCCESS" : "FAILED",
+                    details = result.Message,
+                    testPayload = testWebhookData
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in webhook test for order {OrderId}", orderId);
+                return StatusCode(500, new { error = ex.Message });
+            }
         }
 
         [HttpPost("test-real")]
@@ -226,6 +383,7 @@ namespace WebAPI.Controllers
                 
                 _logger.LogInformation("Processing PayOS webhook for order {OrderCode}", orderCode);
                 _logger.LogInformation("PayOS payload: {Payload}", JsonSerializer.Serialize(payload));
+                _logger.LogInformation("Raw OrderCode from PayOS: {RawOrderCode} (Type: {Type})", data?.OrderCode, data?.OrderCode?.GetType().Name);
 
                 // Check if payment was successful based on PayOS response
                 if (payload.Success == true || payload.Code == "00")
@@ -317,7 +475,7 @@ namespace WebAPI.Controllers
         public class PayOSData
         {
             // adjust types/names to actual payload structure
-            public object? OrderCode { get; set; }
+            public long OrderCode { get; set; }
             public int? Amount { get; set; }
             public string? Description { get; set; }
             public string? Reference { get; set; }

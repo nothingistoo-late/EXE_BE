@@ -8,6 +8,7 @@ namespace DTOs.PayOSDTOs
         public string PaymentUrl { get; set; } = string.Empty;
         public int Amount { get; set; }
         public string Description { get; set; } = string.Empty;
+        public long OrderCode { get; set; }
         public string Status { get; set; } = string.Empty;
     }
 }

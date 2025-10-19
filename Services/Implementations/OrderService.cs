@@ -391,8 +391,12 @@ namespace Services.Implementations
                     // Update order with payment link information
                     order.PayOSPaymentLinkId = result.Data.PaymentLinkId;
                     order.PayOSPaymentUrl = result.Data.PaymentUrl;
+                    order.PayOSOrderCode = result.Data.OrderCode.ToString(); // Lưu PayOS OrderCode vào Order
                     order.PaymentStatus = PaymentStatus.Pending;
                     await _unitOfWork.SaveChangesAsync();
+                    
+                    _logger.LogInformation("PayOS payment link created for order {OrderId} with PayOSOrderCode: {PayOSOrderCode}", 
+                        order.Id, order.PayOSOrderCode);
                 }
 
                 return result;
@@ -429,77 +433,241 @@ namespace Services.Implementations
             }
         }
 
+        public async Task<ApiResult<OrderResponse>> FindOrderByPayOSOrderCodeAsync(string orderCode)
+        {
+            try
+            {
+                _logger.LogInformation("Finding order by PayOSOrderCode: {OrderCode}", orderCode);
+                
+                // Tìm order bằng PayOSOrderCode
+                var order = await _unitOfWork.OrderRepository
+                    .FirstOrDefaultAsync(o => o.PayOSOrderCode == orderCode);
+                
+                if (order != null)
+                {
+                    _logger.LogInformation("Found order {OrderId} with PayOSOrderCode: {OrderCode}", order.Id, orderCode);
+                    var response = _mapper.Map<OrderResponse>(order);
+                    return ApiResult<OrderResponse>.Success(response, "Order found by PayOSOrderCode");
+                }
+                
+                // Nếu không tìm thấy, tìm order gần nhất có thể liên quan
+                _logger.LogInformation("Order not found with PayOSOrderCode, searching for recent orders...");
+                
+                var recentOrders = await _unitOfWork.OrderRepository
+                    .GetAllAsync(o => o.CreatedAt > DateTime.UtcNow.AddHours(-2))
+                    .OrderByDescending(o => o.CreatedAt)
+                    .Take(10);
+                
+                _logger.LogInformation("Found {Count} recent orders", recentOrders.Count());
+                
+                foreach (var o in recentOrders)
+                {
+                    _logger.LogInformation("Recent Order {OrderId}: PayOSOrderCode='{PayOSOrderCode}', PaymentMethod={PaymentMethod}, Status={Status}, CreatedAt={CreatedAt}", 
+                        o.Id, o.PayOSOrderCode ?? "NULL", o.PaymentMethod, o.Status, o.CreatedAt);
+                }
+                
+                // Không tự động cập nhật order - chỉ log thông tin để debug
+                _logger.LogWarning("No order found with PayOSOrderCode: {OrderCode}", orderCode);
+                _logger.LogWarning("Recent orders analysis:");
+                
+                var ordersWithoutPayOS = recentOrders.Where(o => string.IsNullOrEmpty(o.PayOSOrderCode)).ToList();
+                if (ordersWithoutPayOS.Any())
+                {
+                    _logger.LogWarning("Found {Count} recent orders without PayOSOrderCode:", ordersWithoutPayOS.Count);
+                    foreach (var o in ordersWithoutPayOS)
+                    {
+                        _logger.LogWarning("Order {OrderId}: PaymentMethod={PaymentMethod}, Status={Status}, CreatedAt={CreatedAt}", 
+                            o.Id, o.PaymentMethod, o.Status, o.CreatedAt);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("No recent orders found without PayOSOrderCode");
+                }
+                
+                return ApiResult<OrderResponse>.Failure(new Exception($"No order found with PayOSOrderCode: {orderCode}"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error finding order by PayOSOrderCode: {OrderCode}", orderCode);
+                return ApiResult<OrderResponse>.Failure(ex);
+            }
+        }
+
+        public async Task<ApiResult<bool>> VerifyOrderPaymentFlowAsync(Guid orderId)
+        {
+            try
+            {
+                _logger.LogInformation("Verifying payment flow for order {OrderId}", orderId);
+                
+                var order = await _unitOfWork.OrderRepository.GetByIdAsync(orderId);
+                if (order == null)
+                {
+                    _logger.LogError("Order {OrderId} not found", orderId);
+                    return ApiResult<bool>.Failure(new Exception("Order not found"));
+                }
+                
+                _logger.LogInformation("Order {OrderId} details:", orderId);
+                _logger.LogInformation("- PaymentMethod: {PaymentMethod}", order.PaymentMethod);
+                _logger.LogInformation("- PayOSOrderCode: {PayOSOrderCode}", order.PayOSOrderCode ?? "NULL");
+                _logger.LogInformation("- PayOSPaymentLinkId: {PayOSPaymentLinkId}", order.PayOSPaymentLinkId ?? "NULL");
+                _logger.LogInformation("- PayOSPaymentUrl: {PayOSPaymentUrl}", order.PayOSPaymentUrl ?? "NULL");
+                _logger.LogInformation("- PaymentStatus: {PaymentStatus}", order.PaymentStatus);
+                _logger.LogInformation("- Status: {Status}", order.Status);
+                _logger.LogInformation("- IsPaid: {IsPaid}", order.IsPaid);
+                
+                var issues = new List<string>();
+                
+                if (order.PaymentMethod != PaymentMethod.PayOS)
+                {
+                    issues.Add("Order is not using PayOS payment method");
+                }
+                
+                if (string.IsNullOrEmpty(order.PayOSOrderCode))
+                {
+                    issues.Add("Order does not have PayOSOrderCode - CreatePayOSPaymentAsync may not have been called");
+                }
+                
+                if (string.IsNullOrEmpty(order.PayOSPaymentLinkId))
+                {
+                    issues.Add("Order does not have PayOSPaymentLinkId");
+                }
+                
+                if (string.IsNullOrEmpty(order.PayOSPaymentUrl))
+                {
+                    issues.Add("Order does not have PayOSPaymentUrl");
+                }
+                
+                if (issues.Any())
+                {
+                    _logger.LogError("Payment flow issues found for order {OrderId}:", orderId);
+                    foreach (var issue in issues)
+                    {
+                        _logger.LogError("- {Issue}", issue);
+                    }
+                    return ApiResult<bool>.Failure(new Exception($"Payment flow issues: {string.Join(", ", issues)}"));
+                }
+                
+                _logger.LogInformation("Payment flow verification passed for order {OrderId}", orderId);
+                return ApiResult<bool>.Success(true, "Payment flow verification passed");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error verifying payment flow for order {OrderId}", orderId);
+                return ApiResult<bool>.Failure(ex);
+            }
+        }
+
+        public async Task<ApiResult<OrderResponse>> GetOrderByIdForDebugAsync(Guid orderId)
+        {
+            try
+            {
+                var order = await _unitOfWork.OrderRepository.GetByIdAsync(orderId);
+                if (order == null)
+                    return ApiResult<OrderResponse>.Failure(new Exception("Order not found"));
+
+                _logger.LogInformation("Debug Order {OrderId}: PayOSOrderCode='{PayOSOrderCode}', PaymentMethod={PaymentMethod}, Status={Status}, IsPaid={IsPaid}", 
+                    order.Id, order.PayOSOrderCode ?? "NULL", order.PaymentMethod, order.Status, order.IsPaid);
+
+                var response = _mapper.Map<OrderResponse>(order);
+                return ApiResult<OrderResponse>.Success(response, "Order debug info retrieved");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting order debug info for {OrderId}", orderId);
+                return ApiResult<OrderResponse>.Failure(ex);
+            }
+        }
+
         public async Task<ApiResult<bool>> UpdateOrderStatusByOrderCodeAsync(string orderCode, OrderStatus status, object? paymentInfo = null)
         {
             try
             {
-                // Tìm order bằng orderCode (có thể là string hoặc long)
+                _logger.LogInformation("Searching for order with PayOSOrderCode: {OrderCode}", orderCode);
+                
+                // Tìm order bằng PayOSOrderCode
                 var order = await _unitOfWork.OrderRepository
                     .FirstOrDefaultAsync(o => o.PayOSOrderCode == orderCode);
 
                 if (order == null)
+                {
+                    _logger.LogError("Order not found with PayOSOrderCode: {OrderCode}", orderCode);
+                    _logger.LogError("Possible causes:");
+                    _logger.LogError("1. Order was created but CreatePayOSPaymentAsync was never called");
+                    _logger.LogError("2. PayOSOrderCode was not saved to database");
+                    _logger.LogError("3. Webhook is being called with wrong OrderCode");
+                    _logger.LogError("4. Database transaction was not committed");
+                    
                     return ApiResult<bool>.Failure(new Exception($"Order not found with order code: {orderCode}"));
-
-                // Cập nhật trạng thái
-                order.Status = status;
-                order.UpdatedAt = _currentTime.GetVietnamTime();
-
-                // Xử lý theo trạng thái
-                switch (status)
-                {
-                    case OrderStatus.Processing:
-                    case OrderStatus.Completed:
-                        order.IsPaid = true;
-                        order.PaymentStatus = PaymentStatus.Paid;
-                        break;
-                    case OrderStatus.Cancelled:
-                        order.PaymentStatus = PaymentStatus.Cancelled;
-                        break;
-                    case OrderStatus.Pending:
-                        order.PaymentStatus = PaymentStatus.Expired;
-                        break;
                 }
-
-                // Xóa khỏi tracking khi đơn hàng không còn pending
-                if (status != OrderStatus.Pending)
-                {
-                    _pendingOrderTrackingService.RemovePendingOrder(order.Id);
-                }
-
-                await _unitOfWork.SaveChangesAsync();
-
-                // Gửi email thông báo (nếu cần)
-                try
-                {
-                    var user = await _unitOfWork.UserRepository.GetByIdAsync(order.UserId);
-                    if (user != null)
-                    {
-                        switch (status)
-                        {
-                            case OrderStatus.Processing:
-                                await _emailService.SendOrderPreparationEmailAsync(user.Email, order);
-                                break;
-                            case OrderStatus.Completed:
-                                await _emailService.SendPaymentSuccessEmailAsync(user.Email, order);
-                                break;
-                            case OrderStatus.Cancelled:
-                                await _emailService.SendOrderCancelledEmailAsync(user.Email, order, "Đơn hàng đã bị hủy");
-                                break;
-                        }
-                    }
-                }
-                catch (Exception emailEx)
-                {
-                    // Log lỗi email nhưng không làm fail transaction
-                    _logger.LogError(emailEx, "Error sending email for order {OrderId}", order.Id);
-                }
-
+                
+                _logger.LogInformation("Found order {OrderId} with PayOSOrderCode: {OrderCode}", order.Id, orderCode);
+                
+                // Cập nhật trạng thái order
+                await UpdateOrderStatusInternal(order, status);
                 return ApiResult<bool>.Success(true, $"Order status updated to {status}");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating order status by order code {OrderCode}", orderCode);
                 return ApiResult<bool>.Failure(ex);
+            }
+        }
+
+        private async Task UpdateOrderStatusInternal(Order order, OrderStatus status)
+        {
+            // Cập nhật trạng thái
+            order.Status = status;
+            order.UpdatedAt = _currentTime.GetVietnamTime();
+
+            // Xử lý theo trạng thái
+            switch (status)
+            {
+                case OrderStatus.Processing:
+                case OrderStatus.Completed:
+                    order.IsPaid = true;
+                    order.PaymentStatus = PaymentStatus.Paid;
+                    break;
+                case OrderStatus.Cancelled:
+                    order.PaymentStatus = PaymentStatus.Cancelled;
+                    break;
+                case OrderStatus.Pending:
+                    order.PaymentStatus = PaymentStatus.Expired;
+                    break;
+            }
+
+            // Xóa khỏi tracking khi đơn hàng không còn pending
+            if (status != OrderStatus.Pending)
+            {
+                _pendingOrderTrackingService.RemovePendingOrder(order.Id);
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+
+            // Gửi email thông báo (nếu cần)
+            try
+            {
+                var user = await _unitOfWork.UserRepository.GetByIdAsync(order.UserId);
+                if (user != null)
+                {
+                    switch (status)
+                    {
+                        case OrderStatus.Processing:
+                            await _emailService.SendOrderPreparationEmailAsync(user.Email, order);
+                            break;
+                        case OrderStatus.Completed:
+                            await _emailService.SendPaymentSuccessEmailAsync(user.Email, order);
+                            break;
+                        case OrderStatus.Cancelled:
+                            await _emailService.SendOrderCancelledEmailAsync(user.Email, order, "Đơn hàng đã bị hủy");
+                            break;
+                    }
+                }
+            }
+            catch (Exception emailEx)
+            {
+                // Log lỗi email nhưng không làm fail transaction
+                _logger.LogError(emailEx, "Error sending email for order {OrderId}", order.Id);
             }
         }
 
