@@ -189,17 +189,18 @@ namespace WebAPI.Controllers
                 PropertyNameCaseInsensitive = true
             });
             
+            string computedSignature;
             if (payload?.Data != null)
             {
                 // Create signature data in PayOS format: key1=value1&key2=value2
                 var signatureData = CreatePayOSSignatureData(payload.Data);
                 _logger.LogInformation("Signature data: {SignatureData}", signatureData);
-                var computedSignature = ComputeHmacSha256Hex(signatureData, _options.ChecksumKey);
+                computedSignature = ComputeHmacSha256Hex(signatureData, _options.ChecksumKey);
             }
             else
             {
                 // Fallback to raw body if parsing fails
-                var computedSignature = ComputeHmacSha256Hex(body, _options.ChecksumKey);
+                computedSignature = ComputeHmacSha256Hex(body, _options.ChecksumKey);
             }
 
             // 4. Compare signatures (use time-constant compare)
@@ -210,21 +211,7 @@ namespace WebAPI.Controllers
                 // return Ok(new { code = "00", desc = "Received" });
             }
 
-            // 5. Parse event and data
-            WebhookPayload? payload = null;
-            try
-            {
-                payload = JsonSerializer.Deserialize<WebhookPayload>(body, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogError(ex, "Failed to deserialize webhook payload.");
-                return BadRequest("Invalid payload");
-            }
-
+            // 5. Validate payload
             if (payload == null)
             {
                 _logger.LogWarning("Webhook payload is empty after deserialization.");
@@ -265,8 +252,8 @@ namespace WebAPI.Controllers
                 return StatusCode(500, "Processing error");
             }
 
-                // 7. Return 200 OK to acknowledge
-                return Ok(new { code = "00", desc = "Webhook processed successfully" });
+            // 7. Return 200 OK to acknowledge
+            return Ok(new { code = "00", desc = "Webhook processed successfully" });
             }
             catch (Exception ex)
             {
