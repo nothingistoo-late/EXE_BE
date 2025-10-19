@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,12 +15,14 @@ namespace Services.Commons.Gmail
         private IEmailService _emailService;
         private readonly EmailSettings _emailSettings;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<EXEGmailService> _logger;
 
-        public EXEGmailService(IUnitOfWork unitOfWork, IOptions<EmailSettings> emailSettings,IEmailService emailService)
+        public EXEGmailService(IUnitOfWork unitOfWork, IOptions<EmailSettings> emailSettings,IEmailService emailService, ILogger<EXEGmailService> logger)
         {
             _emailService = emailService;
             _emailSettings = emailSettings.Value;
             _unitOfWork = unitOfWork;
+            _logger = logger;
 
         }
         // Implementation của IEmailService
@@ -39,6 +42,12 @@ namespace Services.Commons.Gmail
 
         public async Task SendPaymentSuccessEmailAsync(string toEmail, Order order)
         {
+            if (string.IsNullOrEmpty(toEmail))
+            {
+                _logger.LogWarning("Cannot send payment success email: toEmail is null or empty for order {OrderId}", order.Id);
+                return;
+            }
+            
             var subject = $"Payment Successful - Order #{order.Id}";
             var body = BuildPaymentSuccessEmailBody(order);
             await _emailService.SendEmailAsync(toEmail, subject, body);

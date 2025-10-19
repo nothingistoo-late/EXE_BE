@@ -650,7 +650,7 @@ namespace Services.Implementations
             try
             {
                 var user = await _unitOfWork.UserRepository.GetByIdAsync(order.UserId);
-                if (user != null)
+                if (user != null && !string.IsNullOrEmpty(user.Email))
                 {
                     switch (status)
                     {
@@ -664,6 +664,10 @@ namespace Services.Implementations
                             await _emailService.SendOrderCancelledEmailAsync(user.Email, order, "Đơn hàng đã bị hủy");
                             break;
                     }
+                }
+                else
+                {
+                    _logger.LogWarning("Cannot send email for order {OrderId}: User not found or email is null", order.Id);
                 }
             }
             catch (Exception emailEx)
