@@ -230,23 +230,34 @@ namespace Services.Implementations
     {
         try
         {
-            // Tạo signature string theo format PayOS
-            string data = $"amount={webhookData.Amount}&cancelUrl={_options.CancelUrl}&description=Payment&orderCode={webhookData.OrderCode}&returnUrl={_options.ReturnUrl}";
+            // PayOS webhook signature format: amount&cancelUrl&description&orderCode&returnUrl
+            string data = $"{webhookData.Amount}&{_options.CancelUrl}&Payment&{webhookData.OrderCode}&{_options.ReturnUrl}";
             
             using var hmac = new System.Security.Cryptography.HMACSHA256(System.Text.Encoding.UTF8.GetBytes(_options.ChecksumKey));
             var hashBytes = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(data));
             var expectedSignature = Convert.ToHexString(hashBytes).ToLower();
             
+            _logger.LogInformation("PayOS Webhook Verification - Data: {Data}", data);
             _logger.LogInformation("PayOS Webhook Verification - Expected: {Expected}, Received: {Received}", 
                 expectedSignature, webhookData.Signature);
             
-            return expectedSignature == webhookData.Signature.ToLower();
+            // Use time-constant comparison to prevent timing attacks
+            return AreSignaturesEqual(expectedSignature, webhookData.Signature.ToLower());
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error verifying PayOS webhook signature");
             return false;
         }
+    }
+
+    private static bool AreSignaturesEqual(string a, string b)
+    {
+        if (a == null || b == null || a.Length != b.Length) return false;
+        var result = 0;
+        for (int i = 0; i < a.Length; i++)
+            result |= a[i] ^ b[i];
+        return result == 0;
     }
 }
 }

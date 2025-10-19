@@ -19,6 +19,7 @@ namespace Services.Interfaces
         Task<ApiResult<List<OrderResponse>>> GetAllOrdersByCustomerIDAsync(Guid customerId);
         Task<ApiResult<OrderResponse>> CancelledOrderAsync(Guid id);
         Task<ApiResult<List<UpdateOrderStatusResult>>> UpdateOrderStatusAsync(List<Guid> guids, OrderStatus status);
+        Task<ApiResult<bool>> UpdateOrderStatusByOrderCodeAsync(string orderCode, OrderStatus status, object? paymentInfo = null);
         Task<ApiResult<PaymentLinkResponse>> CreatePayOSPaymentAsync(Guid orderId);
         Task<ApiResult<bool>> ProcessPayOSPaymentAsync(string paymentLinkId, string orderCode);
     }

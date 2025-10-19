@@ -14,6 +14,7 @@ using Repositories.WorkSeeds.Extensions;
 using Services.Commons.Gmail;
 using Microsoft.AspNetCore.Http;
 using BusinessObjects.Common;
+using Microsoft.Extensions.Logging;
 
 namespace Services.Implementations
 {
@@ -24,14 +25,16 @@ namespace Services.Implementations
         private readonly IPendingOrderTrackingService _pendingOrderTrackingService;
         private readonly IPayOSService _payOSService;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ILogger<OrderService> _logger;
         
-        public OrderService(IMapper mapper, IGenericRepository<Order, Guid> repository, ICurrentUserService currentUserService, IUnitOfWork unitOfWork, ICurrentTime currentTime, IEXEGmailService emailService, IPendingOrderTrackingService pendingOrderTrackingService, IPayOSService payOSService, IHttpContextAccessor httpContextAccessor) : base(repository, currentUserService, unitOfWork, currentTime)
+        public OrderService(IMapper mapper, IGenericRepository<Order, Guid> repository, ICurrentUserService currentUserService, IUnitOfWork unitOfWork, ICurrentTime currentTime, IEXEGmailService emailService, IPendingOrderTrackingService pendingOrderTrackingService, IPayOSService payOSService, IHttpContextAccessor httpContextAccessor, ILogger<OrderService> logger) : base(repository, currentUserService, unitOfWork, currentTime)
         {
             _mapper = mapper;
             _emailService = emailService;
             _pendingOrderTrackingService = pendingOrderTrackingService;
             _payOSService = payOSService;
             _httpContextAccessor = httpContextAccessor;
+            _logger = logger;
         }
 
         public async Task<ApiResult<OrderResponse>> CreateOrderAsync(CreateOrderRequest request)
@@ -422,6 +425,80 @@ namespace Services.Implementations
             }
             catch (Exception ex)
             {
+                return ApiResult<bool>.Failure(ex);
+            }
+        }
+
+        public async Task<ApiResult<bool>> UpdateOrderStatusByOrderCodeAsync(string orderCode, OrderStatus status, object? paymentInfo = null)
+        {
+            try
+            {
+                // Tìm order bằng orderCode (có thể là string hoặc long)
+                var order = await _unitOfWork.OrderRepository
+                    .FirstOrDefaultAsync(o => o.PayOSOrderCode == orderCode);
+
+                if (order == null)
+                    return ApiResult<bool>.Failure(new Exception($"Order not found with order code: {orderCode}"));
+
+                // Cập nhật trạng thái
+                order.Status = status;
+                order.UpdatedAt = _currentTime.GetVietnamTime();
+
+                // Xử lý theo trạng thái
+                switch (status)
+                {
+                    case OrderStatus.Processing:
+                    case OrderStatus.Completed:
+                        order.IsPaid = true;
+                        order.PaymentStatus = PaymentStatus.Paid;
+                        break;
+                    case OrderStatus.Cancelled:
+                        order.PaymentStatus = PaymentStatus.Cancelled;
+                        break;
+                    case OrderStatus.Pending:
+                        order.PaymentStatus = PaymentStatus.Expired;
+                        break;
+                }
+
+                // Xóa khỏi tracking khi đơn hàng không còn pending
+                if (status != OrderStatus.Pending)
+                {
+                    _pendingOrderTrackingService.RemovePendingOrder(order.Id);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                // Gửi email thông báo (nếu cần)
+                try
+                {
+                    var user = await _unitOfWork.UserRepository.GetByIdAsync(order.UserId);
+                    if (user != null)
+                    {
+                        switch (status)
+                        {
+                            case OrderStatus.Processing:
+                                await _emailService.SendOrderPreparationEmailAsync(user.Email, order);
+                                break;
+                            case OrderStatus.Completed:
+                                await _emailService.SendPaymentSuccessEmailAsync(user.Email, order);
+                                break;
+                            case OrderStatus.Cancelled:
+                                await _emailService.SendOrderCancelledEmailAsync(user.Email, order, "Đơn hàng đã bị hủy");
+                                break;
+                        }
+                    }
+                }
+                catch (Exception emailEx)
+                {
+                    // Log lỗi email nhưng không làm fail transaction
+                    _logger.LogError(emailEx, "Error sending email for order {OrderId}", order.Id);
+                }
+
+                return ApiResult<bool>.Success(true, $"Order status updated to {status}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating order status by order code {OrderCode}", orderCode);
                 return ApiResult<bool>.Failure(ex);
             }
         }

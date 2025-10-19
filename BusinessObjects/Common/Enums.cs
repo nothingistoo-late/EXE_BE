@@ -13,7 +13,7 @@
     public enum PaymentMethod { VNPay, CashOnDelivery, PayOS }
     public enum SubscriptionPackageFrequency { Weekly, Monthly }
     public enum CustomerSubscriptionStatus { Inactive, Active}
-    public enum PaymentStatus { Pending, Paid, Failed }
+    public enum PaymentStatus { Pending, Paid, Failed, Cancelled, Expired }
 
     public enum NotificationType 
     { 

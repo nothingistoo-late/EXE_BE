@@ -25,6 +25,7 @@ namespace BusinessObjects
         // PayOS fields
         public string? PayOSPaymentLinkId { get; set; }
         public string? PayOSPaymentUrl { get; set; }
+        public string? PayOSOrderCode { get; set; }
         public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Pending;
         
         public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
