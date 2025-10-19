@@ -1,5 +1,8 @@
 ﻿using DTOs.OrderDTOs.Request;
 using DTOs.OrderDTOs.Respond;
+using DTOs.PayOSDTOs;
+using Services.Commons;
+using BusinessObjects.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,5 +19,7 @@ namespace Services.Interfaces
         Task<ApiResult<List<OrderResponse>>> GetAllOrdersByCustomerIDAsync(Guid customerId);
         Task<ApiResult<OrderResponse>> CancelledOrderAsync(Guid id);
         Task<ApiResult<List<UpdateOrderStatusResult>>> UpdateOrderStatusAsync(List<Guid> guids, OrderStatus status);
+        Task<ApiResult<PaymentLinkResponse>> CreatePayOSPaymentAsync(Guid orderId);
+        Task<ApiResult<bool>> ProcessPayOSPaymentAsync(string paymentLinkId, string orderCode);
     }
 }

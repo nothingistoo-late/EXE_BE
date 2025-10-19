@@ -21,6 +21,12 @@ namespace BusinessObjects
         public double TotalPrice { get; set; }
         public double FinalPrice { get; set; }  // sau khi áp dụng giảm giá
         public string? DiscountCode { get; set; }
+        
+        // PayOS fields
+        public string? PayOSPaymentLinkId { get; set; }
+        public string? PayOSPaymentUrl { get; set; }
+        public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Pending;
+        
         public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     }
 

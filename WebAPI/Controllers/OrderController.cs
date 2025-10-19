@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
 
-namespace API.Controllers
+namespace WebAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -79,6 +79,16 @@ namespace API.Controllers
         public async Task<IActionResult> UpdateOrderStatus([FromBody] UpdateOrderStatusRequest request)
         {
             var result = await _orderService.UpdateOrderStatusAsync(request.OrderIds, request.Status);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
+        /// Create PayOS payment link for order
+        /// </summary>
+        [HttpPost("{orderId:guid}/payos/payment-link")]
+        public async Task<IActionResult> CreatePayOSPaymentLink(Guid orderId)
+        {
+            var result = await _orderService.CreatePayOSPaymentAsync(orderId);
             return result.IsSuccess ? Ok(result) : BadRequest(result);
         }
     }

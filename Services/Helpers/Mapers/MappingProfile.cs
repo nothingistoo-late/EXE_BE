@@ -106,6 +106,9 @@ namespace Services.Helpers.Mappers
                 .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId)) // giả sử Order có CustomerId
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
                 .ForMember(dest => dest.OrderDate, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.PaymentMethod, opt => opt.MapFrom(src => src.PaymentMethod.ToString()))
+                .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => src.PaymentStatus.ToString()))
+                .ForMember(dest => dest.PayOSPaymentUrl, opt => opt.MapFrom(src => src.PayOSPaymentUrl))
                 .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.OrderDetails));
 
             // Map OrderDetail -> OrderDetailResponse

@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using DTOs.OrderDTOs.Request;
 using DTOs.OrderDTOs.Respond;
+using DTOs.PayOSDTOs;
 using Microsoft.EntityFrameworkCore;
 using Services.Commons;
 using Services.Interfaces;
@@ -11,6 +12,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Repositories.WorkSeeds.Extensions;
 using Services.Commons.Gmail;
+using Microsoft.AspNetCore.Http;
+using BusinessObjects.Common;
 
 namespace Services.Implementations
 {
@@ -19,12 +22,16 @@ namespace Services.Implementations
         private readonly IMapper _mapper;
         private readonly IEXEGmailService _emailService;
         private readonly IPendingOrderTrackingService _pendingOrderTrackingService;
+        private readonly IPayOSService _payOSService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         
-        public OrderService(IMapper mapper, IGenericRepository<Order, Guid> repository, ICurrentUserService currentUserService, IUnitOfWork unitOfWork, ICurrentTime currentTime, IEXEGmailService emailService, IPendingOrderTrackingService pendingOrderTrackingService) : base(repository, currentUserService, unitOfWork, currentTime)
+        public OrderService(IMapper mapper, IGenericRepository<Order, Guid> repository, ICurrentUserService currentUserService, IUnitOfWork unitOfWork, ICurrentTime currentTime, IEXEGmailService emailService, IPendingOrderTrackingService pendingOrderTrackingService, IPayOSService payOSService, IHttpContextAccessor httpContextAccessor) : base(repository, currentUserService, unitOfWork, currentTime)
         {
             _mapper = mapper;
             _emailService = emailService;
             _pendingOrderTrackingService = pendingOrderTrackingService;
+            _payOSService = payOSService;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<ApiResult<OrderResponse>> CreateOrderAsync(CreateOrderRequest request)
@@ -342,6 +349,80 @@ namespace Services.Implementations
             catch (Exception ex)
             {
                 return ApiResult<List<UpdateOrderStatusResult>>.Failure(ex);
+            }
+        }
+
+        public async Task<ApiResult<PaymentLinkResponse>> CreatePayOSPaymentAsync(Guid orderId)
+        {
+            try
+            {
+                var order = await _unitOfWork.OrderRepository.GetByIdAsync(orderId, includes: o => o.OrderDetails);
+                if (order == null)
+                    return ApiResult<PaymentLinkResponse>.Failure(new Exception("Order not found"));
+
+                if (order.PaymentMethod != PaymentMethod.PayOS)
+                    return ApiResult<PaymentLinkResponse>.Failure(new Exception("Order is not using PayOS payment method"));
+
+                if (order.IsPaid)
+                    return ApiResult<PaymentLinkResponse>.Failure(new Exception("Order is already paid"));
+
+                var paymentItems = order.OrderDetails.Select(od => new PaymentItem
+                {
+                    Name = od.BoxType?.Name ?? "Unknown Product",
+                    Quantity = od.Quantity,
+                    Price = (int)od.UnitPrice
+                }).ToList();
+
+                var request = new CreatePaymentLinkRequest
+                {
+                    OrderId = orderId,
+                    Amount = (int)order.FinalPrice,
+                    Description = $"Payment for Order #{orderId}",
+                    Items = paymentItems
+                };
+
+                var result = await _payOSService.CreatePaymentLinkAsync(request);
+                
+                if (result.IsSuccess)
+                {
+                    // Update order with payment link information
+                    order.PayOSPaymentLinkId = result.Data.PaymentLinkId;
+                    order.PayOSPaymentUrl = result.Data.PaymentUrl;
+                    order.PaymentStatus = PaymentStatus.Pending;
+                    await _unitOfWork.SaveChangesAsync();
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return ApiResult<PaymentLinkResponse>.Failure(ex);
+            }
+        }
+
+        public async Task<ApiResult<bool>> ProcessPayOSPaymentAsync(string paymentLinkId, string orderCode)
+        {
+            try
+            {
+                var order = await _unitOfWork.OrderRepository
+                    .FirstOrDefaultAsync(o => o.PayOSPaymentLinkId == paymentLinkId);
+
+                if (order == null)
+                    return ApiResult<bool>.Failure(new Exception("Order not found"));
+
+                // Update order status to paid
+                order.IsPaid = true;
+                order.PaymentStatus = PaymentStatus.Paid;
+                order.Status = OrderStatus.Processing;
+                order.UpdatedAt = _currentTime.GetVietnamTime();
+
+                await _unitOfWork.SaveChangesAsync();
+
+                return ApiResult<bool>.Success(true, "Payment processed successfully");
+            }
+            catch (Exception ex)
+            {
+                return ApiResult<bool>.Failure(ex);
             }
         }
 

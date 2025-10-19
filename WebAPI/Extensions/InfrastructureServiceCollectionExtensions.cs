@@ -25,6 +25,7 @@ namespace WebAPI.Extensions
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
             services.Configure<HuggingFaceOptions>(configuration.GetSection("HuggingFace"));
             services.Configure<GroqOptions>(configuration.GetSection("Groq"));
+            services.Configure<DTOs.Options.PayOSOptions>(configuration.GetSection("PayOS"));
 
             // 2. DbContext và CORS
             services.AddDbContext<EXE_BE>(opt =>
@@ -156,6 +157,8 @@ namespace WebAPI.Extensions
             services.AddScoped<IAiMenuService, AiMenuService>();
             services.AddScoped<IGiftBoxService, GiftBoxService>();
             services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IPayOSService, PayOSService>();
+            services.AddHttpContextAccessor();
             //services.AddScoped<IHealthSurveyService, HealthSurveyService>();
             services.AddHttpClient<ChatBoxAI.Services.IGeminiService, ChatBoxAI.Services.GeminiService>();
             services.Configure<ChatBoxAI.Options.GeminiOptions>(
