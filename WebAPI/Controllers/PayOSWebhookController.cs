@@ -237,8 +237,8 @@ namespace WebAPI.Controllers
                 return StatusCode(500, "Processing error");
             }
 
-            // 7. Return 200 OK to acknowledge
-            return Ok(new { code = "00", desc = "Received" });
+                // 7. Return 200 OK to acknowledge
+                return Ok(new { code = "00", desc = "Webhook processed successfully" });
             }
             catch (Exception ex)
             {
