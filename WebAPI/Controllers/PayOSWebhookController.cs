@@ -180,6 +180,8 @@ namespace WebAPI.Controllers
             }
 
             // 3. Compute HMAC-SHA256 of raw body using ChecksumKey (secret)
+            _logger.LogInformation("ChecksumKey: {ChecksumKey}", _options.ChecksumKey);
+            _logger.LogInformation("Raw body for signature: {Body}", body);
             var computedSignature = ComputeHmacSha256Hex(body, _options.ChecksumKey);
 
             // 4. Compare signatures (use time-constant compare)
