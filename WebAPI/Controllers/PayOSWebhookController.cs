@@ -235,32 +235,21 @@ namespace WebAPI.Controllers
             try
             {
                 var data = payload.Data;
-                // Example: data.OrderCode assumed numeric or string - adapt to your model
                 var orderCode = data?.OrderCode?.ToString() ?? string.Empty;
+                
+                _logger.LogInformation("Processing PayOS webhook for order {OrderCode}", orderCode);
+                _logger.LogInformation("PayOS data: {Data}", JsonSerializer.Serialize(data));
 
-                _logger.LogInformation("Handling PayOS event {Event} for order {OrderCode}", payload.Event, orderCode);
-
-                switch (payload.Event?.ToLowerInvariant())
+                // Check if payment was successful based on PayOS response
+                if (payload.Success == true || payload.Code == "00")
                 {
-                    case "payment.success":
-                    case "payment.paid":
-                    case "payment.completed":
-                        // update order status to Completed
-                        await _orderService.UpdateOrderStatusByOrderCodeAsync(orderCode, OrderStatus.Completed, paymentInfo: data);
-                        break;
-
-                    case "payment.cancelled":
-                    case "payment.failed":
-                        await _orderService.UpdateOrderStatusByOrderCodeAsync(orderCode, OrderStatus.Cancelled, paymentInfo: data);
-                        break;
-
-                    case "payment.expired":
-                        await _orderService.UpdateOrderStatusByOrderCodeAsync(orderCode, OrderStatus.Pending, paymentInfo: data);
-                        break;
-
-                    default:
-                        _logger.LogWarning("Unhandled PayOS event type: {Event}", payload.Event);
-                        break;
+                    _logger.LogInformation("Payment successful for order {OrderCode}", orderCode);
+                    await _orderService.UpdateOrderStatusByOrderCodeAsync(orderCode, OrderStatus.Completed, paymentInfo: data);
+                }
+                else
+                {
+                    _logger.LogWarning("Payment failed for order {OrderCode}", orderCode);
+                    await _orderService.UpdateOrderStatusByOrderCodeAsync(orderCode, OrderStatus.Cancelled, paymentInfo: data);
                 }
             }
             catch (Exception ex)
@@ -296,13 +285,15 @@ namespace WebAPI.Controllers
             return result == 0;
         }
 
-        // DTOs for webhook payload (adjust fields to actual PayOS payload)
-        public class WebhookPayload
-        {
-            public string? Event { get; set; }
-            public object? Signature { get; set; } // sometimes included
-            public PayOSData? Data { get; set; }
-        }
+    // DTOs for webhook payload (adjust fields to actual PayOS payload)
+    public class WebhookPayload
+    {
+        public string? Code { get; set; }
+        public string? Desc { get; set; }
+        public bool? Success { get; set; }
+        public PayOSData? Data { get; set; }
+        public string? Signature { get; set; }
+    }
 
         public class PayOSData
         {
