@@ -179,10 +179,28 @@ namespace WebAPI.Controllers
                 return BadRequest("Missing signature");
             }
 
-            // 3. Compute HMAC-SHA256 of raw body using ChecksumKey (secret)
+            // 3. Compute HMAC-SHA256 using PayOS format: key1=value1&key2=value2
             _logger.LogInformation("ChecksumKey: {ChecksumKey}", _options.ChecksumKey);
             _logger.LogInformation("Raw body for signature: {Body}", body);
-            var computedSignature = ComputeHmacSha256Hex(body, _options.ChecksumKey);
+            
+            // Parse payload to get data for signature
+            var payload = JsonSerializer.Deserialize<WebhookPayload>(body, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            
+            if (payload?.Data != null)
+            {
+                // Create signature data in PayOS format: key1=value1&key2=value2
+                var signatureData = CreatePayOSSignatureData(payload.Data);
+                _logger.LogInformation("Signature data: {SignatureData}", signatureData);
+                var computedSignature = ComputeHmacSha256Hex(signatureData, _options.ChecksumKey);
+            }
+            else
+            {
+                // Fallback to raw body if parsing fails
+                var computedSignature = ComputeHmacSha256Hex(body, _options.ChecksumKey);
+            }
 
             // 4. Compare signatures (use time-constant compare)
             if (!AreSignaturesEqual(computedSignature, receivedSignature))
@@ -273,6 +291,32 @@ namespace WebAPI.Controllers
             return result == 0;
         }
 
+        private static string CreatePayOSSignatureData(PayOSData data)
+        {
+            // Create signature data in PayOS format: key1=value1&key2=value2
+            // Sort keys alphabetically as required by PayOS
+            var parameters = new Dictionary<string, string>();
+            
+            if (data.OrderCode != null)
+                parameters["orderCode"] = data.OrderCode.ToString();
+            if (data.Amount != null)
+                parameters["amount"] = data.Amount.ToString();
+            if (data.Description != null)
+                parameters["description"] = data.Description;
+            if (data.Reference != null)
+                parameters["reference"] = data.Reference;
+            if (data.TransactionDateTime != null)
+                parameters["transactionDateTime"] = data.TransactionDateTime;
+            if (data.Currency != null)
+                parameters["currency"] = data.Currency;
+            
+            // Sort by key alphabetically
+            var sortedParams = parameters.OrderBy(kvp => kvp.Key);
+            
+            // Create signature string: key1=value1&key2=value2
+            return string.Join("&", sortedParams.Select(kvp => $"{kvp.Key}={kvp.Value}"));
+        }
+
     // DTOs for webhook payload (adjust fields to actual PayOS payload)
     public class WebhookPayload
     {
@@ -288,8 +332,11 @@ namespace WebAPI.Controllers
             // adjust types/names to actual payload structure
             public object? OrderCode { get; set; }
             public int? Amount { get; set; }
-            public string? Status { get; set; }
+            public string? Description { get; set; }
+            public string? Reference { get; set; }
             public string? TransactionDateTime { get; set; }
+            public string? Currency { get; set; }
+            public string? Status { get; set; }
             // plus other fields...
         }
     }
