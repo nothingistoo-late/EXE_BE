@@ -379,11 +379,11 @@ namespace WebAPI.Controllers
             try
             {
                 var data = payload.Data;
-                var orderCode = data?.OrderCode?.ToString() ?? string.Empty;
+                var orderCode = data?.OrderCode.ToString() ?? string.Empty;
                 
                 _logger.LogInformation("Processing PayOS webhook for order {OrderCode}", orderCode);
                 _logger.LogInformation("PayOS payload: {Payload}", JsonSerializer.Serialize(payload));
-                _logger.LogInformation("Raw OrderCode from PayOS: {RawOrderCode} (Type: {Type})", data?.OrderCode, data?.OrderCode?.GetType().Name);
+                _logger.LogInformation("Raw OrderCode from PayOS: {RawOrderCode} (Type: {Type})", data?.OrderCode, data?.OrderCode.GetType().Name);
 
                 // Check if payment was successful based on PayOS response
                 if (payload.Success == true || payload.Code == "00")

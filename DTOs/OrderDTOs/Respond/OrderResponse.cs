@@ -19,6 +19,7 @@ namespace DTOs.OrderDTOs.Respond
         public string PaymentMethod { get; set; } = string.Empty;
         public string PaymentStatus { get; set; } = string.Empty;
         public string? PayOSPaymentUrl { get; set; }
+        public string? PayOSOrderCode { get; set; }
         public List<OrderDetailResponse> Details { get; set; } = new();
     }
 

@@ -453,8 +453,10 @@ namespace Services.Implementations
                 // Nếu không tìm thấy, tìm order gần nhất có thể liên quan
                 _logger.LogInformation("Order not found with PayOSOrderCode, searching for recent orders...");
                 
-                var recentOrders = await _unitOfWork.OrderRepository
-                    .GetAllAsync(o => o.CreatedAt > DateTime.UtcNow.AddHours(-2))
+                var allOrders = await _unitOfWork.OrderRepository
+                    .GetAllAsync(o => o.CreatedAt > _currentTime.GetVietnamTime().AddHours(-2));
+                
+                var recentOrders = allOrders
                     .OrderByDescending(o => o.CreatedAt)
                     .Take(10);
                 
@@ -670,7 +672,5 @@ namespace Services.Implementations
                 _logger.LogError(emailEx, "Error sending email for order {OrderId}", order.Id);
             }
         }
-
-
     }
 }
