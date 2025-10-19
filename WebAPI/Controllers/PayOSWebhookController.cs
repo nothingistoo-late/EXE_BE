@@ -27,16 +27,122 @@ namespace WebAPI.Controllers
             _orderService = orderService;
         }
 
+        [HttpPost("test")]
+        public IActionResult TestWebhook()
+        {
+            _logger.LogInformation("PayOS Webhook Test endpoint called");
+            return Ok(new { 
+                message = "PayOS Webhook is working!", 
+                timestamp = DateTime.UtcNow,
+                status = "active"
+            });
+        }
+
+        [HttpPost("simulate")]
+        public async Task<IActionResult> SimulatePayOSWebhook([FromBody] object payload)
+        {
+            _logger.LogInformation("=== SIMULATING PAYOS WEBHOOK ===");
+            _logger.LogInformation("Payload: {Payload}", System.Text.Json.JsonSerializer.Serialize(payload));
+            
+            // Simulate real PayOS webhook data
+            var simulatedData = new
+            {
+                Event = "payment.success",
+                Data = new
+                {
+                    OrderCode = "123456789",
+                    Amount = 100000,
+                    Status = "PAID",
+                    TransactionDateTime = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")
+                }
+            };
+
+            _logger.LogInformation("Simulated PayOS data: {Data}", System.Text.Json.JsonSerializer.Serialize(simulatedData));
+            
+            return Ok(new { 
+                message = "Simulation completed - check logs for details",
+                simulated = simulatedData
+            });
+        }
+
+        [HttpPost("test-real")]
+        public async Task<IActionResult> TestRealWebhook()
+        {
+            try
+            {
+                _logger.LogInformation("=== TESTING REAL PAYOS WEBHOOK PROCESSING ===");
+                
+                // Tạo test order code
+                var testOrderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+                
+                // Test với real webhook data structure
+                var testWebhookData = new
+                {
+                    Event = "payment.success",
+                    Data = new
+                    {
+                        OrderCode = testOrderCode,
+                        Amount = 50000,
+                        Status = "PAID",
+                        TransactionDateTime = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")
+                    }
+                };
+
+                _logger.LogInformation("Testing with order code: {OrderCode}", testOrderCode);
+                
+                // Gọi method thực sự để test
+                var result = await _orderService.UpdateOrderStatusByOrderCodeAsync(
+                    testOrderCode, 
+                    BusinessObjects.Common.OrderStatus.Completed
+                );
+
+                _logger.LogInformation("Test result: {Result}", result.IsSuccess ? "SUCCESS" : "FAILED");
+                if (!result.IsSuccess)
+                {
+                    _logger.LogWarning("Test failed: {Message}", result.Message);
+                }
+
+                return Ok(new { 
+                    message = "Real webhook test completed",
+                    orderCode = testOrderCode,
+                    result = result.IsSuccess ? "SUCCESS" : "FAILED",
+                    details = result.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in real webhook test");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
         [HttpPost("webhook")]
         public async Task<IActionResult> ReceiveWebhook()
         {
-            // 1. Read raw body (string) - must read raw for signature verification
-            Request.EnableBuffering();
-            using var reader = new StreamReader(Request.Body, Encoding.UTF8, leaveOpen: true);
-            var body = await reader.ReadToEndAsync();
-            Request.Body.Position = 0;
+            try
+            {
+                // 1. Read raw body (string) - must read raw for signature verification
+                Request.EnableBuffering();
+                using var reader = new StreamReader(Request.Body, Encoding.UTF8, leaveOpen: true);
+                var body = await reader.ReadToEndAsync();
+                Request.Body.Position = 0;
 
-            _logger.LogInformation("Received PayOS webhook body: {Body}", body);
+                _logger.LogInformation("=== PAYOS WEBHOOK RECEIVED ===");
+                _logger.LogInformation("Body: {Body}", body);
+                _logger.LogInformation("Headers: {Headers}", string.Join(", ", Request.Headers.Select(h => $"{h.Key}: {h.Value}")));
+
+                // Handle PayOS validation request (simple test)
+                if (string.IsNullOrEmpty(body) || body.Contains("test") || body.Contains("validation") || body == "{}")
+                {
+                    _logger.LogInformation("PayOS validation request received - returning 200 OK");
+                    return Ok(new { code = "00", desc = "Webhook validated successfully" });
+                }
+
+                // Log để debug - xem PayOS gửi gì
+                _logger.LogInformation("=== PAYOS WEBHOOK DEBUG ===");
+                _logger.LogInformation("Headers: {Headers}", string.Join(", ", Request.Headers.Select(h => $"{h.Key}: {h.Value}")));
+                _logger.LogInformation("Body: {Body}", body);
+                _logger.LogInformation("=========================");
 
             // 2. Try read signature from header 'x-signature' or from JSON field "signature"
             string? signatureFromHeader = null;
@@ -141,6 +247,12 @@ namespace WebAPI.Controllers
 
             // 7. Return 200 OK to acknowledge
             return Ok(new { code = "00", desc = "Received" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in webhook processing");
+                return Ok(new { code = "00", desc = "Received" }); // Always return 200 to PayOS
+            }
         }
 
         private static string ComputeHmacSha256Hex(string message, string secret)
