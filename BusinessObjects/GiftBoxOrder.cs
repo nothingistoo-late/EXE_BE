@@ -18,19 +18,8 @@ namespace BusinessObjects
         public string Vegetables { get; set; } = string.Empty; // JSON string of vegetables list
         
         [Required]
-        [MaxLength(100)]
-        public string Receiver { get; set; } = string.Empty;
-        
-        [Required]
-        [MaxLength(100)]
-        public string Occasion { get; set; } = string.Empty;
-        
-        [Required]
         [MaxLength(500)]
         public string GreetingMessage { get; set; } = string.Empty;
-        
-        [Required]
-        public new DateTime CreatedAt { get; set; }
         
         // Navigation properties
         public virtual Order Order { get; set; } = null!;

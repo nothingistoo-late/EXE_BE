@@ -12,19 +12,8 @@ namespace DTOs.GiftBoxDTOs.Request
         public List<string> Vegetables { get; set; } = new List<string>();
         
         [Required]
-        [MaxLength(100)]
-        public string Receiver { get; set; } = string.Empty;
-        
-        [Required]
-        [MaxLength(100)]
-        public string Occasion { get; set; } = string.Empty;
-        
-        [Required]
-        [MaxLength(200)]
-        public string MainWish { get; set; } = string.Empty;
-        
-        [MaxLength(200)]
-        public string? CustomMessage { get; set; }
+        [MaxLength(500)]
+        public string GreetingMessage { get; set; } = string.Empty;
         
         [Required]
         public int Quantity { get; set; } = 1;

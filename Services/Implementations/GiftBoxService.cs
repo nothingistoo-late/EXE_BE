@@ -77,14 +77,7 @@ namespace Services.Implementations
                     if (giftBox == null)
                         return ApiResult<GiftBoxOrderResponse>.Failure(new Exception("Gift Box type not found"));
 
-                    // 3. Generate greeting message
-                    var greetingMessage = await _aiService.GenerateWishAsync(
-                        request.Receiver,
-                        request.Occasion,
-                        request.MainWish,
-                        request.CustomMessage);
-
-                    // 4. Create order
+                    // 3. Create order
                     var order = new Order
                     {
                         Id = Guid.NewGuid(),
@@ -99,7 +92,7 @@ namespace Services.Implementations
                         UpdatedBy = _currentUserService.GetUserId() ?? Guid.Empty
                     };
 
-                    // 5. Add order detail for GiftBox
+                    // 4. Add order detail for GiftBox
                     var orderDetail = new OrderDetail
                     {
                         Id = Guid.NewGuid(),
@@ -169,9 +162,7 @@ namespace Services.Implementations
                         Id = Guid.NewGuid(),
                         OrderId = order.Id,
                         Vegetables = JsonConvert.SerializeObject(request.Vegetables),
-                        Receiver = request.Receiver,
-                        Occasion = request.Occasion,
-                        GreetingMessage = greetingMessage
+                        GreetingMessage = request.GreetingMessage
                     };
 
                     await CreateAsync(giftBoxOrder);
@@ -183,9 +174,7 @@ namespace Services.Implementations
                         OrderId = order.Id,
                         GiftBoxOrderId = giftBoxOrder.Id,
                         Vegetables = request.Vegetables,
-                        Receiver = request.Receiver,
-                        Occasion = request.Occasion,
-                        GreetingMessage = greetingMessage,
+                        GreetingMessage = request.GreetingMessage,
                         TotalPrice = order.TotalPrice,
                         FinalPrice = order.FinalPrice,
                         CreatedAt = order.CreatedAt,

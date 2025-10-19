@@ -8,3 +8,4 @@ namespace Repositories.Interfaces
         Task<UserDiscount?> GetUserDiscountAsync(Guid userId, Guid discountId);
     }
 }
+

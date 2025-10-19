@@ -152,10 +152,10 @@ namespace WebAPI.Extensions
             services.AddScoped<ICartService, CartService>();
             services.AddScoped<ICustomerSubscriptionService, CustomerSubscriptionService>();
             services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();
-               services.AddScoped<IImageSearchService, ImageSearchService>();
-               services.AddScoped<IAiMenuService, AiMenuService>();
-               services.AddScoped<IGiftBoxService, GiftBoxService>();
-               services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IImageSearchService, ImageSearchService>();
+            services.AddScoped<IAiMenuService, AiMenuService>();
+            services.AddScoped<IGiftBoxService, GiftBoxService>();
+            services.AddScoped<INotificationService, NotificationService>();
             //services.AddScoped<IHealthSurveyService, HealthSurveyService>();
             services.AddHttpClient<ChatBoxAI.Services.IGeminiService, ChatBoxAI.Services.GeminiService>();
             services.Configure<ChatBoxAI.Options.GeminiOptions>(
