@@ -27,6 +27,17 @@ namespace WebAPI.Controllers
             _orderService = orderService;
         }
 
+        [HttpGet("webhook")]
+        public IActionResult WebhookGet()
+        {
+            _logger.LogInformation("PayOS Webhook GET endpoint called");
+            return Ok(new { 
+                message = "PayOS Webhook is working!", 
+                timestamp = DateTime.UtcNow,
+                status = "active"
+            });
+        }
+
         [HttpPost("test")]
         public IActionResult TestWebhook()
         {
@@ -135,6 +146,13 @@ namespace WebAPI.Controllers
                 if (string.IsNullOrEmpty(body) || body.Contains("test") || body.Contains("validation") || body == "{}")
                 {
                     _logger.LogInformation("PayOS validation request received - returning 200 OK");
+                    return Ok(new { code = "00", desc = "Webhook validated successfully" });
+                }
+
+                // Handle empty POST request (PayOS validation)
+                if (Request.ContentLength == 0 || body == "")
+                {
+                    _logger.LogInformation("PayOS empty validation request received - returning 200 OK");
                     return Ok(new { code = "00", desc = "Webhook validated successfully" });
                 }
 
