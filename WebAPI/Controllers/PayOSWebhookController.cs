@@ -218,17 +218,24 @@ namespace WebAPI.Controllers
                 var orderCode = data?.OrderCode?.ToString() ?? string.Empty;
                 
                 _logger.LogInformation("Processing PayOS webhook for order {OrderCode}", orderCode);
+                _logger.LogInformation("PayOS payload: {Payload}", JsonSerializer.Serialize(payload));
 
                 // Check if payment was successful based on PayOS response
                 if (payload.Success == true || payload.Code == "00")
                 {
                     _logger.LogInformation("Payment successful for order {OrderCode}", orderCode);
-                    await _orderService.UpdateOrderStatusByOrderCodeAsync(orderCode, OrderStatus.Completed, paymentInfo: data);
+                    _logger.LogInformation("Calling UpdateOrderStatusByOrderCodeAsync for order {OrderCode}", orderCode);
+                    
+                    var result = await _orderService.UpdateOrderStatusByOrderCodeAsync(orderCode, OrderStatus.Completed, paymentInfo: data);
+                    _logger.LogInformation("UpdateOrderStatusByOrderCodeAsync result: {Result}", JsonSerializer.Serialize(result));
                 }
                 else
                 {
                     _logger.LogWarning("Payment failed for order {OrderCode}", orderCode);
-                    await _orderService.UpdateOrderStatusByOrderCodeAsync(orderCode, OrderStatus.Cancelled, paymentInfo: data);
+                    _logger.LogInformation("Calling UpdateOrderStatusByOrderCodeAsync for order {OrderCode}", orderCode);
+                    
+                    var result = await _orderService.UpdateOrderStatusByOrderCodeAsync(orderCode, OrderStatus.Cancelled, paymentInfo: data);
+                    _logger.LogInformation("UpdateOrderStatusByOrderCodeAsync result: {Result}", JsonSerializer.Serialize(result));
                 }
             }
             catch (Exception ex)
