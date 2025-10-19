@@ -139,7 +139,7 @@ namespace WebAPI.Controllers
                 Request.Body.Position = 0;
 
             // Handle PayOS validation request (simple test)
-            if (string.IsNullOrEmpty(body) || body.Contains("test") || body.Contains("validation") || body == "{}")
+            if (string.IsNullOrEmpty(body) || body == "{}")
             {
                 return Ok(new { code = "00", desc = "Webhook validated successfully" });
             }
