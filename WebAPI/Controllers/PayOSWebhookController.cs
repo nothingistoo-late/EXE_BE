@@ -41,9 +41,9 @@ namespace WebAPI.Controllers
         [HttpPost("test")]
         public IActionResult TestWebhook()
         {
-            _logger.LogInformation("PayOS Webhook Test endpoint called");
+            _logger.LogInformation("PayOS Webhook Test endpoint called - NEW VERSION");
             return Ok(new { 
-                message = "PayOS Webhook is working!", 
+                message = "PayOS Webhook is working - NEW VERSION!", 
                 timestamp = DateTime.UtcNow,
                 status = "active"
             });
