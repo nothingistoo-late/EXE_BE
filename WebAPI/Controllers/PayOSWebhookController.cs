@@ -138,29 +138,17 @@ namespace WebAPI.Controllers
                 var body = await reader.ReadToEndAsync();
                 Request.Body.Position = 0;
 
-                _logger.LogInformation("=== PAYOS WEBHOOK RECEIVED ===");
-                _logger.LogInformation("Body: {Body}", body);
-                _logger.LogInformation("Headers: {Headers}", string.Join(", ", Request.Headers.Select(h => $"{h.Key}: {h.Value}")));
+            // Handle PayOS validation request (simple test)
+            if (string.IsNullOrEmpty(body) || body.Contains("test") || body.Contains("validation") || body == "{}")
+            {
+                return Ok(new { code = "00", desc = "Webhook validated successfully" });
+            }
 
-                // Handle PayOS validation request (simple test)
-                if (string.IsNullOrEmpty(body) || body.Contains("test") || body.Contains("validation") || body == "{}")
-                {
-                    _logger.LogInformation("PayOS validation request received - returning 200 OK");
-                    return Ok(new { code = "00", desc = "Webhook validated successfully" });
-                }
-
-                // Handle empty POST request (PayOS validation)
-                if (Request.ContentLength == 0 || body == "")
-                {
-                    _logger.LogInformation("PayOS empty validation request received - returning 200 OK");
-                    return Ok(new { code = "00", desc = "Webhook validated successfully" });
-                }
-
-                // Log để debug - xem PayOS gửi gì
-                _logger.LogInformation("=== PAYOS WEBHOOK DEBUG ===");
-                _logger.LogInformation("Headers: {Headers}", string.Join(", ", Request.Headers.Select(h => $"{h.Key}: {h.Value}")));
-                _logger.LogInformation("Body: {Body}", body);
-                _logger.LogInformation("=========================");
+            // Handle empty POST request (PayOS validation)
+            if (Request.ContentLength == 0 || body == "")
+            {
+                return Ok(new { code = "00", desc = "Webhook validated successfully" });
+            }
 
             // 2. Try read signature from header 'x-signature' or from JSON field "signature"
             string? signatureFromHeader = null;
@@ -198,17 +186,8 @@ namespace WebAPI.Controllers
             if (!AreSignaturesEqual(computedSignature, receivedSignature))
             {
                 _logger.LogError("Invalid signature. Computed: {Computed}, Received: {Received}", computedSignature, receivedSignature);
-                _logger.LogError("Accepting webhook despite invalid signature for testing purposes");
-                
-                // Return OK to PayOS but log the error
                 return Ok(new { code = "00", desc = "Received" });
             }
-            else
-            {
-                _logger.LogInformation("Webhook signature verified successfully.");
-            }
-
-            _logger.LogInformation("Webhook signature verified.");
 
             // 5. Parse event and data
             WebhookPayload? payload = null;
@@ -238,7 +217,6 @@ namespace WebAPI.Controllers
                 var orderCode = data?.OrderCode?.ToString() ?? string.Empty;
                 
                 _logger.LogInformation("Processing PayOS webhook for order {OrderCode}", orderCode);
-                _logger.LogInformation("PayOS data: {Data}", JsonSerializer.Serialize(data));
 
                 // Check if payment was successful based on PayOS response
                 if (payload.Success == true || payload.Code == "00")
