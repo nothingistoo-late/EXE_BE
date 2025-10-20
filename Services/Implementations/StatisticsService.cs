@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using BusinessObjects.Common;
 using Repositories;
 using Repositories.Interfaces;
 using Services.Interfaces;
@@ -41,6 +42,8 @@ namespace Services.Implementations
 
                 var query = _context.Orders
                     .Where(o => o.CreatedAt >= startDate && o.CreatedAt <= endDate)
+                    .Where(o => o.IsPaid || o.Status == OrderStatus.Completed)
+                    .Where(o=> o.PaymentStatus == PaymentStatus.Paid)
                     .Include(o => o.OrderDetails)
                         .ThenInclude(d => d.BoxType)
                     .Include(o => o.User);
