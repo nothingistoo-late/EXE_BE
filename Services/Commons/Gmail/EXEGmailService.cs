@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using BusinessObjects;
 using Repositories.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace Services.Commons.Gmail
 {
@@ -35,8 +36,10 @@ namespace Services.Commons.Gmail
 
         public async Task SendOrderConfirmationEmailAsync(string toEmail, Order order)
         {
-            var subject = $"Order Confirmation - #{order.Id}";
-            var body = BuildOrderConfirmationEmailBody(order);
+            var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
+            var shortOrderId = MaskId(order.Id);
+            var subject = $"Xác nhận đơn hàng - #{shortOrderId}";
+            var body = BuildOrderConfirmationEmailBody(order, userName, maskedUserId, shortOrderId, address);
             await _emailService.SendEmailAsync(toEmail, subject, body);
         }
 
@@ -48,15 +51,19 @@ namespace Services.Commons.Gmail
                 return;
             }
             
-            var subject = $"Payment Successful - Order #{order.Id}";
-            var body = BuildPaymentSuccessEmailBody(order);
+            var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
+            var shortOrderId = MaskId(order.Id);
+            var subject = $"Thanh toán thành công - #{shortOrderId}";
+            var body = BuildPaymentSuccessEmailBody(order, userName, maskedUserId, shortOrderId, address);
             await _emailService.SendEmailAsync(toEmail, subject, body);
         }
 
         public async Task SendNewOrderNotificationToAdminAsync(Order order)
         {
-            var subject = $"New Order Received - #{order.Id}";
-            var body = BuildNewOrderNotificationBody(order);
+            var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
+            var shortOrderId = MaskId(order.Id);
+            var subject = $"Đơn hàng mới - #{shortOrderId}";
+            var body = BuildNewOrderNotificationBody(order, userName, maskedUserId, phone, address, shortOrderId);
             await _emailService.SendEmailAsync(_emailSettings.AdminEmail, subject, body);
         }
 
@@ -69,29 +76,37 @@ namespace Services.Commons.Gmail
 
         public async Task SendOrderPreparationEmailAsync(string toEmail, Order order)
         {
-            var subject = $"Đơn hàng đang được chuẩn bị - #{order.Id}";
-            var body = BuildOrderPreparationEmailBody(order);
+            var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
+            var shortOrderId = MaskId(order.Id);
+            var subject = $"Đơn hàng đang chuẩn bị - #{shortOrderId}";
+            var body = BuildOrderPreparationEmailBody(order, userName, maskedUserId, shortOrderId, address);
             await _emailService.SendEmailAsync(toEmail, subject, body);
         }
 
         public async Task SendOrderDeliveredEmailAsync(string toEmail, Order order)
         {
-            var subject = $"Giao hàng thành công - #{order.Id}";
-            var body = BuildOrderDeliveredEmailBody(order);
+            var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
+            var shortOrderId = MaskId(order.Id);
+            var subject = $"Giao hàng thành công - #{shortOrderId}";
+            var body = BuildOrderDeliveredEmailBody(order, userName, maskedUserId, shortOrderId, address);
             await _emailService.SendEmailAsync(toEmail, subject, body);
         }
 
         public async Task SendOrderCancelledEmailAsync(string toEmail, Order order, string reason)
         {
-            var subject = $"Đơn hàng đã bị hủy - #{order.Id}";
-            var body = BuildOrderCancelledEmailBody(order, reason);
+            var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
+            var shortOrderId = MaskId(order.Id);
+            var subject = $"Đơn hàng đã hủy - #{shortOrderId}";
+            var body = BuildOrderCancelledEmailBody(order, reason, userName, maskedUserId, shortOrderId, address);
             await _emailService.SendEmailAsync(toEmail, subject, body);
         }
 
         public async Task SendRefundProcessedEmailAsync(string toEmail, Order order, decimal refundAmount)
         {
-            var subject = $"Hoàn tiền thành công - #{order.Id}";
-            var body = BuildRefundProcessedEmailBody(order, refundAmount);
+            var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
+            var shortOrderId = MaskId(order.Id);
+            var subject = $"Hoàn tiền thành công - #{shortOrderId}";
+            var body = BuildRefundProcessedEmailBody(order, refundAmount, userName, maskedUserId, shortOrderId, address);
             await _emailService.SendEmailAsync(toEmail, subject, body);
         }
 
@@ -147,43 +162,55 @@ namespace Services.Commons.Gmail
 
         public async Task SendHighValueOrderAlertAsync(Order order, decimal threshold)
         {
-            var subject = $"🚨 Đơn hàng giá trị cao - #{order.Id}";
-            var body = BuildHighValueOrderAlertBody(order, threshold);
+            var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
+            var shortOrderId = MaskId(order.Id);
+            var subject = $"🚨 Đơn hàng giá trị cao - #{shortOrderId}";
+            var body = BuildHighValueOrderAlertBody(order, threshold, userName, maskedUserId, phone, address, shortOrderId);
             await _emailService.SendEmailAsync(_emailSettings.AdminEmail, subject, body);
         }
 
         public async Task SendOrderCancelledAlertAsync(Order order, string reason)
         {
-            var subject = $"⚠️ Đơn hàng bị hủy - #{order.Id}";
-            var body = BuildOrderCancelledAlertBody(order, reason);
+            var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
+            var shortOrderId = MaskId(order.Id);
+            var subject = $"⚠️ Đơn hàng bị hủy - #{shortOrderId}";
+            var body = BuildOrderCancelledAlertBody(order, reason, userName, maskedUserId, phone, address, shortOrderId);
             await _emailService.SendEmailAsync(_emailSettings.AdminEmail, subject, body);
         }
 
         public async Task SendPendingOrderAlertAsync(Order order, TimeSpan pendingTime)
         {
-            var subject = $"⏰ Đơn hàng chờ xác nhận quá lâu - #{order.Id}";
-            var body = BuildPendingOrderAlertBody(order, pendingTime);
+            var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
+            var shortOrderId = MaskId(order.Id);
+            var subject = $"⏰ Đơn hàng chờ xác nhận - #{shortOrderId}";
+            var body = BuildPendingOrderAlertBody(order, pendingTime, userName, maskedUserId, phone, address, shortOrderId);
             await _emailService.SendEmailAsync(_emailSettings.AdminEmail, subject, body);
         }
 
         public async Task SendPaymentFailedAlertAsync(Order order, int failureCount)
         {
-            var subject = $"💳 Thanh toán thất bại nhiều lần - #{order.Id}";
-            var body = BuildPaymentFailedAlertBody(order, failureCount);
+            var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
+            var shortOrderId = MaskId(order.Id);
+            var subject = $"💳 Thanh toán thất bại nhiều lần - #{shortOrderId}";
+            var body = BuildPaymentFailedAlertBody(order, failureCount, userName, maskedUserId, phone, address, shortOrderId);
             await _emailService.SendEmailAsync(_emailSettings.AdminEmail, subject, body);
         }
 
         public async Task SendRefundRequestAlertAsync(Order order, string reason)
         {
-            var subject = $"💰 Yêu cầu hoàn tiền - #{order.Id}";
-            var body = BuildRefundRequestAlertBody(order, reason);
+            var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
+            var shortOrderId = MaskId(order.Id);
+            var subject = $"💰 Yêu cầu hoàn tiền - #{shortOrderId}";
+            var body = BuildRefundRequestAlertBody(order, reason, userName, maskedUserId, phone, address, shortOrderId);
             await _emailService.SendEmailAsync(_emailSettings.AdminEmail, subject, body);
         }
 
         public async Task SendDeliveryIssueAlertAsync(Order order, string issue)
         {
-            var subject = $"🚚 Đơn hàng có vấn đề giao hàng - #{order.Id}";
-            var body = BuildDeliveryIssueAlertBody(order, issue);
+            var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
+            var shortOrderId = MaskId(order.Id);
+            var subject = $"🚚 Sự cố giao hàng - #{shortOrderId}";
+            var body = BuildDeliveryIssueAlertBody(order, issue, userName, maskedUserId, phone, address, shortOrderId);
             await _emailService.SendEmailAsync(_emailSettings.AdminEmail, subject, body);
         }
 
@@ -221,7 +248,7 @@ namespace Services.Commons.Gmail
 </html>";
         }
 
-        private string BuildOrderConfirmationEmailBody(Order order)
+        private string BuildOrderConfirmationEmailBody(Order order, string userName, string maskedUserId, string shortOrderId, string address)
         {
             var itemsHtml = string.Join("", order.OrderDetails.Select(item => $@"
             <tr>
@@ -249,15 +276,17 @@ namespace Services.Commons.Gmail
 <body>
     <div class='container'>
         <div class='header'>
-            <h1>Order Confirmation</h1>
-            <p>Order #{order.Id}</p>
+            <h1>Xác nhận đơn hàng</h1>
+            <p>Đơn hàng #${shortOrderId}</p>
         </div>
         <div class='content'>
-            <h2>Xin chào khách hàng,</h2>
+            <h2>Xin chào {userName},</h2>
+            <p><strong>Mã khách hàng:</strong> {maskedUserId}</p>
+            <p><strong>Địa chỉ giao hàng:</strong> {address}</p>
             <p>Cảm ơn bạn đã đặt hàng! Đơn hàng của bạn đã được xác nhận.</p>
             
             <h3>Thông tin đơn hàng:</h3>
-            <p><strong>Mã đơn hàng:</strong> #{order.Id}</p>
+            <p><strong>Mã đơn hàng:</strong> #{shortOrderId}</p>
             <p><strong>Ngày đặt:</strong> {order.CreatedAt:dd/MM/yyyy HH:mm}</p>
             <p><strong>Trạng thái:</strong> {order.Status}</p>
             <p><strong>Phương thức thanh toán:</strong> {order.PaymentMethod}</p>
@@ -291,7 +320,7 @@ namespace Services.Commons.Gmail
 </html>";
         }
 
-        private string BuildPaymentSuccessEmailBody(Order order)
+        private string BuildPaymentSuccessEmailBody(Order order, string userName, string maskedUserId, string shortOrderId, string address)
         {
             var itemsHtml = string.Join("", order.OrderDetails.Select(item => $@"
             <tr>
@@ -320,16 +349,18 @@ namespace Services.Commons.Gmail
 <body>
     <div class='container'>
         <div class='header'>
-            <h1>✓ Payment Successful</h1>
-            <p>Order #{order.Id}</p>
+            <h1>✓ Thanh toán thành công</h1>
+            <p>Đơn hàng #{shortOrderId}</p>
         </div>
         <div class='content'>
-            <h2>Xin chào khách hàng,</h2>
+            <h2>Xin chào {userName},</h2>
+            <p><strong>Mã khách hàng:</strong> {maskedUserId}</p>
+            <p><strong>Địa chỉ giao hàng:</strong> {address}</p>
             <div class='success-badge'>Thanh toán thành công!</div>
             <p>Chúng tôi đã nhận được thanh toán của bạn. Đơn hàng đang được xử lý.</p>
             
             <h3>Thông tin thanh toán:</h3>
-            <p><strong>Mã đơn hàng:</strong> #{order.Id}</p>
+            <p><strong>Mã đơn hàng:</strong> #{shortOrderId}</p>
             <p><strong>Ngày thanh toán:</strong> {order.CreatedAt:dd/MM/yyyy HH:mm}</p>
             <p><strong>Phương thức:</strong> {order.PaymentMethod}</p>
             <p><strong>Trạng thái:</strong> {order.Status}</p>
@@ -364,7 +395,7 @@ namespace Services.Commons.Gmail
 </html>";
         }
 
-        private string BuildNewOrderNotificationBody(Order order)
+        private string BuildNewOrderNotificationBody(Order order, string userName, string maskedUserId, string phone, string address, string shortOrderId)
         {
             var itemsHtml = string.Join("", order.OrderDetails.Select(item => $@"
             <tr>
@@ -393,8 +424,8 @@ namespace Services.Commons.Gmail
 <body>
     <div class='container'>
         <div class='header'>
-            <h1>🔔 New Order Alert</h1>
-            <p>Order #{order.Id}</p>
+            <h1>🔔 Đơn hàng mới</h1>
+            <p>Đơn hàng #{shortOrderId}</p>
         </div>
         <div class='content'>
             <div class='alert'>
@@ -402,12 +433,15 @@ namespace Services.Commons.Gmail
             </div>
             
             <h3>Thông tin khách hàng:</h3>
-            <p><strong>User ID:</strong> {order.UserId}</p>
+            <p><strong>User ID:</strong> {maskedUserId}</p>
+            <p><strong>Tên:</strong> {userName}</p>
+            <p><strong>Số điện thoại:</strong> {phone}</p>
+            <p><strong>Địa chỉ:</strong> {address}</p>
             <p><strong>Trạng thái:</strong> {order.Status}</p>
             <p><strong>Đã thanh toán:</strong> {(order.IsPaid ? "Có" : "Chưa")}</p>
             
             <h3>Thông tin đơn hàng:</h3>
-            <p><strong>Mã đơn hàng:</strong> #{order.Id}</p>
+            <p><strong>Mã đơn hàng:</strong> #{shortOrderId}</p>
             <p><strong>Ngày đặt:</strong> {order.CreatedAt:dd/MM/yyyy HH:mm}</p>
             <p><strong>Phương thức thanh toán:</strong> {order.PaymentMethod}</p>
             <p><strong>Phương thức giao hàng:</strong> {order.DeliveryMethod}</p>
@@ -441,9 +475,56 @@ namespace Services.Commons.Gmail
 </html>";
         }
 
+        private async Task<(string userName, string maskedUserId, string phone, string address)> GetUserInfoAsync(Guid userId)
+        {
+            try
+            {
+                var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+                var customer = await _unitOfWork.CustomerRepository
+                    .GetQueryable()
+                    .FirstOrDefaultAsync(c => c.UserId == userId);
+                var name = "Khách hàng";
+                if (user != null)
+                {
+                    var full = (user.FullName ?? string.Empty).Trim();
+                    if (!string.IsNullOrWhiteSpace(full))
+                    {
+                        name = full;
+                    }
+                    else
+                    {
+                        var combined = ($"{user.FirstName} {user.LastName}").Trim();
+                        if (!string.IsNullOrWhiteSpace(combined))
+                            name = combined;
+                    }
+                }
+                var phone = user?.PhoneNumber ?? "N/A";
+                var address = customer?.Address ?? "(chưa cập nhật)";
+                var masked = userId.ToString();
+                if (!string.IsNullOrWhiteSpace(masked))
+                {
+                    masked = masked.Length >= 5 ? masked.Substring(0, 5) : masked;
+                }
+                return (name, masked, phone, address);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to get user info for {UserId}", userId);
+                var masked = userId.ToString();
+                masked = masked.Length >= 5 ? masked.Substring(0, 5) : masked;
+                return ("Khách hàng", masked, "N/A", "(chưa cập nhật)");
+            }
+        }
+
+        private string MaskId(Guid id)
+        {
+            var s = id.ToString();
+            return s.Length >= 5 ? s.Substring(0, 5) : s;
+        }
+
         // ========== TEMPLATE EMAIL CHO ĐƠN HÀNG ==========
 
-        private string BuildOrderPreparationEmailBody(Order order)
+        private string BuildOrderPreparationEmailBody(Order order, string userName, string maskedUserId, string shortOrderId, string address)
         {
             var itemsHtml = string.Join("", order.OrderDetails.Select(item => $@"
             <tr>
@@ -471,15 +552,17 @@ namespace Services.Commons.Gmail
     <div class='container'>
         <div class='header'>
             <h1>📦 Đơn hàng đang được chuẩn bị</h1>
-            <p>Order #{order.Id}</p>
+            <p>Đơn hàng #{shortOrderId}</p>
         </div>
         <div class='content'>
-            <h2>Xin chào khách hàng,</h2>
+            <h2>Xin chào {userName},</h2>
+            <p><strong>Mã khách hàng:</strong> {maskedUserId}</p>
+            <p><strong>Địa chỉ giao hàng:</strong> {address}</p>
             <div class='preparation-badge'>Đơn hàng đang được đóng gói!</div>
             <p>Đơn hàng của bạn đã được xác nhận và đang được chuẩn bị để giao hàng.</p>
             
             <h3>Thông tin đơn hàng:</h3>
-            <p><strong>Mã đơn hàng:</strong> #{order.Id}</p>
+            <p><strong>Mã đơn hàng:</strong> #{shortOrderId}</p>
             <p><strong>Ngày đặt:</strong> {order.CreatedAt:dd/MM/yyyy HH:mm}</p>
             <p><strong>Trạng thái:</strong> Đang chuẩn bị</p>
             <p><strong>Dự kiến giao hàng:</strong> 2-3 ngày làm việc</p>
@@ -509,7 +592,7 @@ namespace Services.Commons.Gmail
 </html>";
         }
 
-        private string BuildOrderDeliveredEmailBody(Order order)
+        private string BuildOrderDeliveredEmailBody(Order order, string userName, string maskedUserId, string shortOrderId, string address)
         {
             var itemsHtml = string.Join("", order.OrderDetails.Select(item => $@"
             <tr>
@@ -537,15 +620,17 @@ namespace Services.Commons.Gmail
     <div class='container'>
         <div class='header'>
             <h1>✅ Giao hàng thành công</h1>
-            <p>Order #{order.Id}</p>
+            <p>Đơn hàng #{shortOrderId}</p>
         </div>
         <div class='content'>
-            <h2>Xin chào khách hàng,</h2>
+            <h2>Xin chào {userName},</h2>
+            <p><strong>Mã khách hàng:</strong> {maskedUserId}</p>
+            <p><strong>Địa chỉ giao hàng:</strong> {address}</p>
             <div class='delivered-badge'>Đơn hàng đã được giao thành công!</div>
             <p>Chúng tôi rất vui thông báo rằng đơn hàng của bạn đã được giao thành công.</p>
             
             <h3>Thông tin giao hàng:</h3>
-            <p><strong>Mã đơn hàng:</strong> #{order.Id}</p>
+            <p><strong>Mã đơn hàng:</strong> #{shortOrderId}</p>
             <p><strong>Ngày giao hàng:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}</p>
             <p><strong>Trạng thái:</strong> Đã giao hàng</p>
             
@@ -574,7 +659,7 @@ namespace Services.Commons.Gmail
 </html>";
         }
 
-        private string BuildOrderCancelledEmailBody(Order order, string reason)
+        private string BuildOrderCancelledEmailBody(Order order, string reason, string userName, string maskedUserId, string shortOrderId, string address)
         {
             return $@"
 <!DOCTYPE html>
@@ -594,15 +679,17 @@ namespace Services.Commons.Gmail
     <div class='container'>
         <div class='header'>
             <h1>❌ Đơn hàng đã bị hủy</h1>
-            <p>Order #{order.Id}</p>
+            <p>Đơn hàng #{shortOrderId}</p>
         </div>
         <div class='content'>
-            <h2>Xin chào khách hàng,</h2>
+            <h2>Xin chào {userName},</h2>
+            <p><strong>Mã khách hàng:</strong> {maskedUserId}</p>
+            <p><strong>Địa chỉ giao hàng:</strong> {address}</p>
             <div class='cancelled-badge'>Đơn hàng đã bị hủy</div>
             <p>Chúng tôi rất tiếc thông báo rằng đơn hàng của bạn đã bị hủy.</p>
             
             <h3>Thông tin đơn hàng:</h3>
-            <p><strong>Mã đơn hàng:</strong> #{order.Id}</p>
+            <p><strong>Mã đơn hàng:</strong> #{shortOrderId}</p>
             <p><strong>Ngày đặt:</strong> {order.CreatedAt:dd/MM/yyyy HH:mm}</p>
             <p><strong>Trạng thái:</strong> Đã hủy</p>
             <p><strong>Tổng giá trị:</strong> {order.FinalPrice:N0} VNĐ</p>
@@ -623,7 +710,7 @@ namespace Services.Commons.Gmail
 </html>";
         }
 
-        private string BuildRefundProcessedEmailBody(Order order, decimal refundAmount)
+        private string BuildRefundProcessedEmailBody(Order order, decimal refundAmount, string userName, string maskedUserId, string shortOrderId, string address)
         {
             return $@"
 <!DOCTYPE html>
@@ -643,15 +730,17 @@ namespace Services.Commons.Gmail
     <div class='container'>
         <div class='header'>
             <h1>💰 Hoàn tiền thành công</h1>
-            <p>Order #{order.Id}</p>
+            <p>Đơn hàng #{shortOrderId}</p>
         </div>
         <div class='content'>
-            <h2>Xin chào khách hàng,</h2>
+            <h2>Xin chào {userName},</h2>
+            <p><strong>Mã khách hàng:</strong> {maskedUserId}</p>
+            <p><strong>Địa chỉ giao hàng:</strong> {address}</p>
             <div class='refund-badge'>Hoàn tiền đã được xử lý!</div>
             <p>Chúng tôi đã xử lý yêu cầu hoàn tiền của bạn thành công.</p>
             
             <h3>Thông tin hoàn tiền:</h3>
-            <p><strong>Mã đơn hàng:</strong> #{order.Id}</p>
+            <p><strong>Mã đơn hàng:</strong> #{shortOrderId}</p>
             <p><strong>Ngày hoàn tiền:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}</p>
             <p><strong>Phương thức thanh toán gốc:</strong> {order.PaymentMethod}</p>
             
@@ -1022,7 +1111,7 @@ namespace Services.Commons.Gmail
 
         // ========== TEMPLATE EMAIL CẢNH BÁO CHO ADMIN ==========
 
-        private string BuildHighValueOrderAlertBody(Order order, decimal threshold)
+        private string BuildHighValueOrderAlertBody(Order order, decimal threshold, string userName, string maskedUserId, string phone, string address, string shortOrderId)
         {
             var itemsHtml = string.Join("", order.OrderDetails.Select(item => $@"
             <tr>
@@ -1052,7 +1141,7 @@ namespace Services.Commons.Gmail
     <div class='container'>
         <div class='header'>
             <h1>🚨 Đơn hàng giá trị cao</h1>
-            <p>Order #{order.Id}</p>
+            <p>Đơn hàng #{shortOrderId}</p>
         </div>
         <div class='content'>
             <div class='alert-badge'>CẢNH BÁO: Đơn hàng vượt ngưỡng</div>
@@ -1065,7 +1154,10 @@ namespace Services.Commons.Gmail
             </div>
             
             <h3>Thông tin khách hàng:</h3>
-            <p><strong>User ID:</strong> {order.UserId}</p>
+            <p><strong>User ID:</strong> {maskedUserId}</p>
+            <p><strong>Tên:</strong> {userName}</p>
+            <p><strong>Số điện thoại:</strong> {phone}</p>
+            <p><strong>Địa chỉ:</strong> {address}</p>
             <p><strong>Ngày đặt:</strong> {order.CreatedAt:dd/MM/yyyy HH:mm}</p>
             <p><strong>Phương thức thanh toán:</strong> {order.PaymentMethod}</p>
             <p><strong>Trạng thái:</strong> {order.Status}</p>
@@ -1101,7 +1193,7 @@ namespace Services.Commons.Gmail
 </html>";
         }
 
-        private string BuildOrderCancelledAlertBody(Order order, string reason)
+        private string BuildOrderCancelledAlertBody(Order order, string reason, string userName, string maskedUserId, string phone, string address, string shortOrderId)
         {
             return $@"
 <!DOCTYPE html>
@@ -1121,15 +1213,18 @@ namespace Services.Commons.Gmail
     <div class='container'>
         <div class='header'>
             <h1>⚠️ Đơn hàng bị hủy</h1>
-            <p>Order #{order.Id}</p>
+            <p>Đơn hàng #{shortOrderId}</p>
         </div>
         <div class='content'>
             <div class='alert-badge'>CẢNH BÁO: Đơn hàng đã bị hủy</div>
             <p>Đơn hàng này đã bị hủy và cần được xem xét.</p>
             
             <h3>Thông tin đơn hàng:</h3>
-            <p><strong>Mã đơn hàng:</strong> #{order.Id}</p>
-            <p><strong>User ID:</strong> {order.UserId}</p>
+            <p><strong>Mã đơn hàng:</strong> #{shortOrderId}</p>
+            <p><strong>User ID:</strong> {maskedUserId}</p>
+            <p><strong>Tên:</strong> {userName}</p>
+            <p><strong>Số điện thoại:</strong> {phone}</p>
+            <p><strong>Địa chỉ:</strong> {address}</p>
             <p><strong>Ngày đặt:</strong> {order.CreatedAt:dd/MM/yyyy HH:mm}</p>
             <p><strong>Ngày hủy:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}</p>
             <p><strong>Giá trị:</strong> {order.FinalPrice:N0} VNĐ</p>
@@ -1156,7 +1251,7 @@ namespace Services.Commons.Gmail
 </html>";
         }
 
-        private string BuildPendingOrderAlertBody(Order order, TimeSpan pendingTime)
+        private string BuildPendingOrderAlertBody(Order order, TimeSpan pendingTime, string userName, string maskedUserId, string phone, string address, string shortOrderId)
         {
             return $@"
 <!DOCTYPE html>
@@ -1176,7 +1271,7 @@ namespace Services.Commons.Gmail
     <div class='container'>
         <div class='header'>
             <h1>⏰ Đơn hàng chờ xác nhận quá lâu</h1>
-            <p>Order #{order.Id}</p>
+            <p>Đơn hàng #{shortOrderId}</p>
         </div>
         <div class='content'>
             <div class='alert-badge'>CẢNH BÁO: Đơn hàng chờ xử lý quá lâu</div>
@@ -1189,8 +1284,11 @@ namespace Services.Commons.Gmail
             </div>
             
             <h3>Thông tin đơn hàng:</h3>
-            <p><strong>Mã đơn hàng:</strong> #{order.Id}</p>
-            <p><strong>User ID:</strong> {order.UserId}</p>
+            <p><strong>Mã đơn hàng:</strong> #{shortOrderId}</p>
+            <p><strong>User ID:</strong> {maskedUserId}</p>
+            <p><strong>Tên:</strong> {userName}</p>
+            <p><strong>Số điện thoại:</strong> {phone}</p>
+            <p><strong>Địa chỉ:</strong> {address}</p>
             <p><strong>Ngày đặt:</strong> {order.CreatedAt:dd/MM/yyyy HH:mm}</p>
             <p><strong>Trạng thái:</strong> {order.Status}</p>
             <p><strong>Giá trị:</strong> {order.FinalPrice:N0} VNĐ</p>
@@ -1212,7 +1310,7 @@ namespace Services.Commons.Gmail
 </html>";
         }
 
-        private string BuildPaymentFailedAlertBody(Order order, int failureCount)
+        private string BuildPaymentFailedAlertBody(Order order, int failureCount, string userName, string maskedUserId, string phone, string address, string shortOrderId)
         {
             return $@"
 <!DOCTYPE html>
@@ -1232,7 +1330,7 @@ namespace Services.Commons.Gmail
     <div class='container'>
         <div class='header'>
             <h1>💳 Thanh toán thất bại nhiều lần</h1>
-            <p>Order #{order.Id}</p>
+            <p>Đơn hàng #{shortOrderId}</p>
         </div>
         <div class='content'>
             <div class='alert-badge'>CẢNH BÁO: Nghi ngờ gian lận</div>
@@ -1245,8 +1343,11 @@ namespace Services.Commons.Gmail
             </div>
             
             <h3>Thông tin đơn hàng:</h3>
-            <p><strong>Mã đơn hàng:</strong> #{order.Id}</p>
-            <p><strong>User ID:</strong> {order.UserId}</p>
+            <p><strong>Mã đơn hàng:</strong> #{shortOrderId}</p>
+            <p><strong>User ID:</strong> {maskedUserId}</p>
+            <p><strong>Tên:</strong> {userName}</p>
+            <p><strong>Số điện thoại:</strong> {phone}</p>
+            <p><strong>Địa chỉ:</strong> {address}</p>
             <p><strong>Ngày đặt:</strong> {order.CreatedAt:dd/MM/yyyy HH:mm}</p>
             <p><strong>Trạng thái:</strong> {order.Status}</p>
             <p><strong>Giá trị:</strong> {order.FinalPrice:N0} VNĐ</p>
@@ -1269,7 +1370,7 @@ namespace Services.Commons.Gmail
 </html>";
         }
 
-        private string BuildRefundRequestAlertBody(Order order, string reason)
+        private string BuildRefundRequestAlertBody(Order order, string reason, string userName, string maskedUserId, string phone, string address, string shortOrderId)
         {
             return $@"
 <!DOCTYPE html>
@@ -1289,15 +1390,18 @@ namespace Services.Commons.Gmail
     <div class='container'>
         <div class='header'>
             <h1>💰 Yêu cầu hoàn tiền</h1>
-            <p>Order #{order.Id}</p>
+            <p>Đơn hàng #{shortOrderId}</p>
         </div>
         <div class='content'>
             <div class='alert-badge'>CẢNH BÁO: Yêu cầu hoàn tiền cần phê duyệt</div>
             <p>Khách hàng đã yêu cầu hoàn tiền cho đơn hàng này.</p>
             
             <h3>Thông tin đơn hàng:</h3>
-            <p><strong>Mã đơn hàng:</strong> #{order.Id}</p>
-            <p><strong>User ID:</strong> {order.UserId}</p>
+            <p><strong>Mã đơn hàng:</strong> #{shortOrderId}</p>
+            <p><strong>User ID:</strong> {maskedUserId}</p>
+            <p><strong>Tên:</strong> {userName}</p>
+            <p><strong>Số điện thoại:</strong> {phone}</p>
+            <p><strong>Địa chỉ:</strong> {address}</p>
             <p><strong>Ngày đặt:</strong> {order.CreatedAt:dd/MM/yyyy HH:mm}</p>
             <p><strong>Trạng thái:</strong> {order.Status}</p>
             <p><strong>Giá trị:</strong> {order.FinalPrice:N0} VNĐ</p>
@@ -1325,7 +1429,7 @@ namespace Services.Commons.Gmail
 </html>";
         }
 
-        private string BuildDeliveryIssueAlertBody(Order order, string issue)
+        private string BuildDeliveryIssueAlertBody(Order order, string issue, string userName, string maskedUserId, string phone, string address, string shortOrderId)
         {
             return $@"
 <!DOCTYPE html>
@@ -1345,15 +1449,18 @@ namespace Services.Commons.Gmail
     <div class='container'>
         <div class='header'>
             <h1>🚚 Đơn hàng có vấn đề giao hàng</h1>
-            <p>Order #{order.Id}</p>
+            <p>Đơn hàng #{shortOrderId}</p>
         </div>
         <div class='content'>
             <div class='alert-badge'>CẢNH BÁO: Vấn đề giao hàng</div>
             <p>Đơn hàng này gặp vấn đề trong quá trình giao hàng.</p>
             
             <h3>Thông tin đơn hàng:</h3>
-            <p><strong>Mã đơn hàng:</strong> #{order.Id}</p>
-            <p><strong>User ID:</strong> {order.UserId}</p>
+            <p><strong>Mã đơn hàng:</strong> #{shortOrderId}</p>
+            <p><strong>User ID:</strong> {maskedUserId}</p>
+            <p><strong>Tên:</strong> {userName}</p>
+            <p><strong>Số điện thoại:</strong> {phone}</p>
+            <p><strong>Địa chỉ:</strong> {address}</p>
             <p><strong>Ngày đặt:</strong> {order.CreatedAt:dd/MM/yyyy HH:mm}</p>
             <p><strong>Trạng thái:</strong> {order.Status}</p>
             <p><strong>Giá trị:</strong> {order.FinalPrice:N0} VNĐ</p>

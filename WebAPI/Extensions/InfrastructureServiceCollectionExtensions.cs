@@ -122,7 +122,7 @@ namespace WebAPI.Extensions
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IUserEmailService, UserEmailService>();
             services.AddScoped<ICustomerService, CustomerService>();
-            services.AddScoped<IEmailService, EmailService>();
+            // Registered via AddEmailServices as HttpClient-typed
             services.AddScoped<IEXEGmailService, EXEGmailService>();
             services.AddScoped<IStatisticsService, StatisticsService>();
             // Use GroqAIService for AI functionality

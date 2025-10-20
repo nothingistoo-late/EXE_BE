@@ -9,5 +9,6 @@
         public string FromEmail { get; set; }
         public string FromName { get; set; }
         public string AdminEmail { get; set; }
+        public string ResendApiKey { get; set; }
     }
 }

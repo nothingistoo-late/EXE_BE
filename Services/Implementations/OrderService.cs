@@ -369,9 +369,16 @@ namespace Services.Implementations
                 if (order.IsPaid)
                     return ApiResult<PaymentLinkResponse>.Failure(new Exception("Order is already paid"));
 
+                // Ensure product names are available even if BoxType navigation isn't included
+                var boxTypeIds = order.OrderDetails.Select(od => od.BoxTypeId).Distinct().ToList();
+                var boxTypes = await _unitOfWork.BoxTypeRepository.GetByIdsAsync(boxTypeIds);
+                var boxTypeMap = boxTypes.ToDictionary(b => b.Id, b => b.Name);
+
                 var paymentItems = order.OrderDetails.Select(od => new PaymentItem
                 {
-                    Name = od.BoxType?.Name ?? "Unknown Product",
+                    Name = boxTypeMap.TryGetValue(od.BoxTypeId, out var name) && !string.IsNullOrWhiteSpace(name)
+                        ? name
+                        : "Unknown Product",
                     Quantity = od.Quantity,
                     Price = (int)od.UnitPrice
                 }).ToList();

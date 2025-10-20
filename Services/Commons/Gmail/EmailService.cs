@@ -3,6 +3,9 @@ using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MimeKit;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 
 namespace Services.Commons.Gmail
 {
@@ -10,11 +13,17 @@ namespace Services.Commons.Gmail
     {
         private readonly EmailSettings _emailSettings;
         private readonly ILogger<EmailService> _logger;
+        private readonly HttpClient _httpClient;
 
-        public EmailService(IOptions<EmailSettings> emailSettings, ILogger<EmailService> logger)
+        public EmailService(IOptions<EmailSettings> emailSettings, ILogger<EmailService> logger, HttpClient httpClient)
         {
             _emailSettings = emailSettings.Value;
             _logger = logger;
+            _httpClient = httpClient;
+            if (_httpClient.BaseAddress == null)
+            {
+                _httpClient.BaseAddress = new Uri("https://api.resend.com/");
+            }
         }
 
         public async Task SendEmailAsync(string email, string subject, string message)
@@ -24,109 +33,59 @@ namespace Services.Commons.Gmail
 
         public async Task SendEmailAsync(List<string> to, string subject, string message)
         {
-			// Email sending is disabled. This method returns without sending.
-			_logger.LogInformation("Email sending is DISABLED. Skipping send to: {Recipients}", string.Join(", ", to ?? new List<string>()));
-			
-			/*
-			// === ORIGINAL IMPLEMENTATION (COMMENTED OUT) ===
-			_logger.LogInformation("=== STARTING EMAIL SEND PROCESS ===");
-			_logger.LogInformation("Recipients: {Recipients}", string.Join(", ", to));
-			_logger.LogInformation("Subject: {Subject}", subject);
-			_logger.LogInformation("Message length: {MessageLength} characters", message?.Length ?? 0);
-			
-			if (to == null || to.Count == 0)
-				throw new ArgumentException("Recipient list cannot be empty", nameof(to));
-			if (string.IsNullOrEmpty(subject))
-				throw new ArgumentException("Subject cannot be empty", nameof(subject));
-			if (string.IsNullOrEmpty(message))
-				throw new ArgumentException("Message cannot be empty", nameof(message));
+            // Validate inputs
+            if (to == null || to.Count == 0)
+                throw new ArgumentException("Recipient list cannot be empty", nameof(to));
+            if (string.IsNullOrWhiteSpace(subject))
+                throw new ArgumentException("Subject cannot be empty", nameof(subject));
+            if (string.IsNullOrWhiteSpace(message))
+                throw new ArgumentException("Message cannot be empty", nameof(message));
 
-			var email = new MimeMessage();
-			
-			// Kiểm tra email settings
-			_logger.LogInformation("Checking EmailSettings configuration...");
-			if (_emailSettings == null)
-			{
-				_logger.LogError("EmailSettings is NULL!");
-				throw new InvalidOperationException("EmailSettings is not configured");
-			}
-			if (string.IsNullOrEmpty(_emailSettings.FromEmail))
-			{
-				_logger.LogError("FromEmail is NULL or empty!");
-				throw new InvalidOperationException("FromEmail is not configured");
-			}
-			if (string.IsNullOrEmpty(_emailSettings.FromName))
-			{
-				_logger.LogError("FromName is NULL or empty!");
-				throw new InvalidOperationException("FromName is not configured");
-			}
-				
-			_logger.LogInformation("EmailSettings - SmtpServer: {SmtpServer}, SmtpPort: {SmtpPort}", 
-				_emailSettings.SmtpServer, _emailSettings.SmtpPort);
-			_logger.LogInformation("EmailSettings - SmtpUsername: {SmtpUsername}, FromEmail: {FromEmail}, FromName: {FromName}", 
-				_emailSettings.SmtpUsername, _emailSettings.FromEmail, _emailSettings.FromName);
-				
-			email.From.Add(new MailboxAddress(_emailSettings.FromName, _emailSettings.FromEmail));
+            _logger.LogInformation("[Resend] Preparing to send email. Recipients: {Recipients}, SubjectLength: {SubjectLen}, HtmlLength: {HtmlLen}",
+                string.Join(", ", to), subject.Length, message.Length);
 
-			foreach (var recipient in to)
-			{
-				_logger.LogInformation("Processing recipient: {Recipient}", recipient ?? "NULL");
-				
-				if (string.IsNullOrEmpty(recipient))
-				{
-					_logger.LogWarning("Skipping null or empty recipient email");
-					continue;
-				}
-				
-				try
-				{
-					email.To.Add(MailboxAddress.Parse(recipient));
-					_logger.LogInformation("Successfully added recipient: {Recipient}", recipient);
-				}
-				catch (Exception ex)
-				{
-					_logger.LogError(ex, "Failed to parse recipient: {Recipient}", recipient);
-					throw;
-				}
-			}
+            if (string.IsNullOrWhiteSpace(_emailSettings.ResendApiKey))
+                throw new InvalidOperationException("ResendApiKey is not configured in EmailSettings");
+            if (string.IsNullOrWhiteSpace(_emailSettings.FromEmail))
+                throw new InvalidOperationException("FromEmail is not configured in EmailSettings");
 
-			email.Subject = subject;
-			email.Body = new TextPart("html") { Text = message };
-			
-			try
-			{
-				_logger.LogInformation("Creating SMTP client...");
-				using var smtp = new SmtpClient();
-				
-				_logger.LogInformation("Connecting to SMTP server: {SmtpServer}:{SmtpPort}", 
-					_emailSettings.SmtpServer, _emailSettings.SmtpPort);
-				await smtp.ConnectAsync(_emailSettings.SmtpServer, _emailSettings.SmtpPort, SecureSocketOptions.StartTls);
-				_logger.LogInformation("SMTP connection established successfully");
-				
-				_logger.LogInformation("Authenticating with SMTP server using username: {SmtpUsername}", 
-					_emailSettings.SmtpUsername);
-				await smtp.AuthenticateAsync(_emailSettings.SmtpUsername, _emailSettings.SmtpPassword);
-				_logger.LogInformation("SMTP authentication successful");
-				
-				_logger.LogInformation("Sending email to {Recipients}...", string.Join(", ", to));
-				await smtp.SendAsync(email);
-				_logger.LogInformation("Email sent successfully to {Recipients}", string.Join(", ", to));
-				
-				_logger.LogInformation("Disconnecting from SMTP server...");
-				await smtp.DisconnectAsync(true);
-				_logger.LogInformation("=== EMAIL SEND PROCESS COMPLETED SUCCESSFULLY ===");
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "=== EMAIL SEND PROCESS FAILED ===");
-				_logger.LogError(ex, "Failed to send email to {Recipients}", string.Join(", ", to));
-				_logger.LogError(ex, "SMTP Server: {SmtpServer}:{SmtpPort}", _emailSettings.SmtpServer, _emailSettings.SmtpPort);
-				_logger.LogError(ex, "SMTP Username: {SmtpUsername}", _emailSettings.SmtpUsername);
-				throw;
-			}
-			*/
+            var payload = new
+            {
+                from = string.IsNullOrWhiteSpace(_emailSettings.FromName)
+                    ? _emailSettings.FromEmail
+                    : $"{_emailSettings.FromName} <{_emailSettings.FromEmail}>",
+                to = to,
+                subject = subject,
+                html = message
+            };
 
-			return;
+            var json = JsonSerializer.Serialize(payload);
+            using var request = new HttpRequestMessage(HttpMethod.Post, "emails");
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _emailSettings.ResendApiKey);
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            _logger.LogInformation("[Resend] POST {Url} with payload size {Bytes} bytes", _httpClient.BaseAddress + "emails", Encoding.UTF8.GetByteCount(json));
+
+            var response = await _httpClient.SendAsync(request);
+            _logger.LogInformation("[Resend] Response status: {StatusCode}", (int)response.StatusCode);
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Resend API failed with status {StatusCode}: {Body}", (int)response.StatusCode, body);
+                response.EnsureSuccessStatusCode();
+            }
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+            try
+            {
+                using var doc = JsonDocument.Parse(responseBody);
+                var id = doc.RootElement.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+                _logger.LogInformation("[Resend] Email sent successfully. Id: {Id}, To: {Recipients}", id ?? "(unknown)", string.Join(", ", to));
+            }
+            catch
+            {
+                _logger.LogInformation("[Resend] Email sent successfully. To: {Recipients}. Raw response: {Body}", string.Join(", ", to), responseBody);
+            }
         }
     }
 }

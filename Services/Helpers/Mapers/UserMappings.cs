@@ -71,11 +71,13 @@ namespace Services.Helpers.Mapers
         {
             return new CurrentUserResponse
             {
+                Id = user.Id,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email ?? string.Empty,
                 Gender = user.Gender.ToString(), // Fix for CS0029
                 PhoneNumbers = user.PhoneNumber ?? string.Empty,
+                Address = string.Empty,
                 CreateAt = user.CreatedAt,
                 UpdateAt = user.UpdatedAt,
                 AccessToken = accessToken

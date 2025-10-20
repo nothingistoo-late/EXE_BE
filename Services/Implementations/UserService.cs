@@ -299,7 +299,18 @@ namespace Services.Implementations
                 return ApiResult<CurrentUserResponse>.Failure(new InvalidOperationException("User not found"));
 
             var token = await _tokenService.GenerateToken(user);
-            return ApiResult<CurrentUserResponse>.Success(UserMappings.ToCurrentUserResponse(user, token.Data), "Current user retrieved successfully");
+            var resp = UserMappings.ToCurrentUserResponse(user, token.Data);
+            // Enrich with customer profile (address)
+            try
+            {
+                var customer = await _unitOfWork.CustomerRepository.GetByIdAsync(user.Id);
+                if (customer != null && !string.IsNullOrWhiteSpace(customer.Address))
+                {
+                    resp.Address = customer.Address;
+                }
+            }
+            catch { }
+            return ApiResult<CurrentUserResponse>.Success(resp, "Current user retrieved successfully");
         }
 
         public async Task<ApiResult<CurrentUserResponse>> RefreshTokenAsync(RefreshTokenRequest req)

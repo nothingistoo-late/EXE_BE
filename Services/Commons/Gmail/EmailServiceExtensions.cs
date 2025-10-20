@@ -9,7 +9,7 @@ namespace Services.Commons.Gmail
         {
             services.Configure(configureOptions);
             services.AddSingleton<EmailQueue>();
-            services.AddTransient<IEmailService, EmailService>();
+            services.AddHttpClient<IEmailService, EmailService>();
             services.AddTransient<IEmailQueueService, EmailQueueService>();
             services.AddTransient<SendEmailJob>();
             services.AddHostedService<EmailBackgroundService>();
