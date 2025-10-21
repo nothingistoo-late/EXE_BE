@@ -27,262 +27,262 @@ namespace WebAPI.Controllers
             _orderService = orderService;
         }
 
-        [HttpGet("webhook")]
-        public IActionResult WebhookGet()
-        {
-            _logger.LogInformation("PayOS Webhook GET endpoint called");
-            return Ok(new { 
-                message = "PayOS Webhook is working!", 
-                timestamp = DateTime.UtcNow,
-                status = "active",
-                webhookUrl = $"{Request.Scheme}://{Request.Host}{Request.Path}",
-                environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown"
-            });
-        }
+        //[HttpGet("webhook")]
+        //public IActionResult WebhookGet()
+        //{
+        //    _logger.LogInformation("PayOS Webhook GET endpoint called");
+        //    return Ok(new { 
+        //        message = "PayOS Webhook is working!", 
+        //        timestamp = DateTime.UtcNow,
+        //        status = "active",
+        //        webhookUrl = $"{Request.Scheme}://{Request.Host}{Request.Path}",
+        //        environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown"
+        //    });
+        //}
 
-        [HttpGet("webhook-info")]
-        public IActionResult GetWebhookInfo()
-        {
-            var webhookUrl = $"{Request.Scheme}://{Request.Host}/api/payos/webhook";
-            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown";
+        //[HttpGet("webhook-info")]
+        //public IActionResult GetWebhookInfo()
+        //{
+        //    var webhookUrl = $"{Request.Scheme}://{Request.Host}/api/payos/webhook";
+        //    var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown";
             
-            return Ok(new {
-                webhookUrl = webhookUrl,
-                environment = environment,
-                timestamp = DateTime.UtcNow,
-                status = "active",
-                message = "Use this URL as your PayOS webhook URL"
-            });
-        }
+        //    return Ok(new {
+        //        webhookUrl = webhookUrl,
+        //        environment = environment,
+        //        timestamp = DateTime.UtcNow,
+        //        status = "active",
+        //        message = "Use this URL as your PayOS webhook URL"
+        //    });
+        //}
 
-        [HttpPost("test")]
-        public IActionResult TestWebhook()
-        {
-            _logger.LogInformation("PayOS Webhook Test endpoint called - NEW VERSION");
-            return Ok(new { 
-                message = "PayOS Webhook is working - NEW VERSION!", 
-                timestamp = DateTime.UtcNow,
-                status = "active"
-            });
-        }
+        //[HttpPost("test")]
+        //public IActionResult TestWebhook()
+        //{
+        //    _logger.LogInformation("PayOS Webhook Test endpoint called - NEW VERSION");
+        //    return Ok(new { 
+        //        message = "PayOS Webhook is working - NEW VERSION!", 
+        //        timestamp = DateTime.UtcNow,
+        //        status = "active"
+        //    });
+        //}
 
-        [HttpPost("simulate")]
-        public async Task<IActionResult> SimulatePayOSWebhook([FromBody] object payload)
-        {
-            _logger.LogInformation("=== SIMULATING PAYOS WEBHOOK ===");
-            _logger.LogInformation("Payload: {Payload}", System.Text.Json.JsonSerializer.Serialize(payload));
+        //[HttpPost("simulate")]
+        //public async Task<IActionResult> SimulatePayOSWebhook([FromBody] object payload)
+        //{
+        //    _logger.LogInformation("=== SIMULATING PAYOS WEBHOOK ===");
+        //    _logger.LogInformation("Payload: {Payload}", System.Text.Json.JsonSerializer.Serialize(payload));
             
-            // Simulate real PayOS webhook data
-            var simulatedData = new
-            {
-                Event = "payment.success",
-                Data = new
-                {
-                    OrderCode = "123456789",
-                    Amount = 100000,
-                    Status = "PAID",
-                    TransactionDateTime = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")
-                }
-            };
+        //    // Simulate real PayOS webhook data
+        //    var simulatedData = new
+        //    {
+        //        Event = "payment.success",
+        //        Data = new
+        //        {
+        //            OrderCode = "123456789",
+        //            Amount = 100000,
+        //            Status = "PAID",
+        //            TransactionDateTime = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")
+        //        }
+        //    };
 
-            _logger.LogInformation("Simulated PayOS data: {Data}", System.Text.Json.JsonSerializer.Serialize(simulatedData));
+        //    _logger.LogInformation("Simulated PayOS data: {Data}", System.Text.Json.JsonSerializer.Serialize(simulatedData));
             
-            return Ok(new { 
-                message = "Simulation completed - check logs for details",
-                simulated = simulatedData
-            });
-        }
+        //    return Ok(new { 
+        //        message = "Simulation completed - check logs for details",
+        //        simulated = simulatedData
+        //    });
+        //}
 
-        [HttpGet("find-order/{orderCode}")]
-        public async Task<IActionResult> FindOrderByPayOSOrderCode(string orderCode)
-        {
-            try
-            {
-                _logger.LogInformation("=== FINDING ORDER BY PAYOS ORDER CODE: {OrderCode} ===", orderCode);
+        //[HttpGet("find-order/{orderCode}")]
+        //public async Task<IActionResult> FindOrderByPayOSOrderCode(string orderCode)
+        //{
+        //    try
+        //    {
+        //        _logger.LogInformation("=== FINDING ORDER BY PAYOS ORDER CODE: {OrderCode} ===", orderCode);
                 
-                var result = await _orderService.FindOrderByPayOSOrderCodeAsync(orderCode);
+        //        var result = await _orderService.FindOrderByPayOSOrderCodeAsync(orderCode);
                 
-                return Ok(new { 
-                    message = "Order search completed",
-                    orderCode = orderCode,
-                    result = result.IsSuccess ? "SUCCESS" : "FAILED",
-                    data = result.Data,
-                    message_detail = result.Message
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error finding order by PayOSOrderCode: {OrderCode}", orderCode);
-                return StatusCode(500, new { error = ex.Message });
-            }
-        }
+        //        return Ok(new { 
+        //            message = "Order search completed",
+        //            orderCode = orderCode,
+        //            result = result.IsSuccess ? "SUCCESS" : "FAILED",
+        //            data = result.Data,
+        //            message_detail = result.Message
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error finding order by PayOSOrderCode: {OrderCode}", orderCode);
+        //        return StatusCode(500, new { error = ex.Message });
+        //    }
+        //}
 
-        [HttpGet("verify-payment-flow/{orderId}")]
-        public async Task<IActionResult> VerifyPaymentFlow(Guid orderId)
-        {
-            try
-            {
-                _logger.LogInformation("=== VERIFYING PAYMENT FLOW FOR ORDER {OrderId} ===", orderId);
+        //[HttpGet("verify-payment-flow/{orderId}")]
+        //public async Task<IActionResult> VerifyPaymentFlow(Guid orderId)
+        //{
+        //    try
+        //    {
+        //        _logger.LogInformation("=== VERIFYING PAYMENT FLOW FOR ORDER {OrderId} ===", orderId);
                 
-                var result = await _orderService.VerifyOrderPaymentFlowAsync(orderId);
+        //        var result = await _orderService.VerifyOrderPaymentFlowAsync(orderId);
                 
-                return Ok(new { 
-                    message = "Payment flow verification completed",
-                    orderId = orderId,
-                    result = result.IsSuccess ? "SUCCESS" : "FAILED",
-                    message_detail = result.Message
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error verifying payment flow for order {OrderId}", orderId);
-                return StatusCode(500, new { error = ex.Message });
-            }
-        }
+        //        return Ok(new { 
+        //            message = "Payment flow verification completed",
+        //            orderId = orderId,
+        //            result = result.IsSuccess ? "SUCCESS" : "FAILED",
+        //            message_detail = result.Message
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error verifying payment flow for order {OrderId}", orderId);
+        //        return StatusCode(500, new { error = ex.Message });
+        //    }
+        //}
 
-        [HttpGet("debug-order/{orderId}")]
-        public async Task<IActionResult> DebugOrder(Guid orderId)
-        {
-            try
-            {
-                _logger.LogInformation("=== DEBUGGING ORDER {OrderId} ===", orderId);
+        //[HttpGet("debug-order/{orderId}")]
+        //public async Task<IActionResult> DebugOrder(Guid orderId)
+        //{
+        //    try
+        //    {
+        //        _logger.LogInformation("=== DEBUGGING ORDER {OrderId} ===", orderId);
                 
-                var result = await _orderService.GetOrderByIdForDebugAsync(orderId);
+        //        var result = await _orderService.GetOrderByIdForDebugAsync(orderId);
                 
-                return Ok(new { 
-                    message = "Order debug completed",
-                    orderId = orderId,
-                    result = result.IsSuccess ? "SUCCESS" : "FAILED",
-                    data = result.Data,
-                    message_detail = result.Message
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in order debug for {OrderId}", orderId);
-                return StatusCode(500, new { error = ex.Message });
-            }
-        }
+        //        return Ok(new { 
+        //            message = "Order debug completed",
+        //            orderId = orderId,
+        //            result = result.IsSuccess ? "SUCCESS" : "FAILED",
+        //            data = result.Data,
+        //            message_detail = result.Message
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error in order debug for {OrderId}", orderId);
+        //        return StatusCode(500, new { error = ex.Message });
+        //    }
+        //}
 
-        [HttpPost("test-webhook/{orderId}")]
-        public async Task<IActionResult> TestWebhookForOrder(Guid orderId)
-        {
-            try
-            {
-                _logger.LogInformation("=== TESTING WEBHOOK FOR ORDER {OrderId} ===", orderId);
+        //[HttpPost("test-webhook/{orderId}")]
+        //public async Task<IActionResult> TestWebhookForOrder(Guid orderId)
+        //{
+        //    try
+        //    {
+        //        _logger.LogInformation("=== TESTING WEBHOOK FOR ORDER {OrderId} ===", orderId);
                 
-                // Lấy thông tin order
-                var orderResult = await _orderService.GetOrderByIdForDebugAsync(orderId);
-                if (!orderResult.IsSuccess)
-                {
-                    return BadRequest(new { error = "Order not found", orderId = orderId });
-                }
+        //        // Lấy thông tin order
+        //        var orderResult = await _orderService.GetOrderByIdForDebugAsync(orderId);
+        //        if (!orderResult.IsSuccess)
+        //        {
+        //            return BadRequest(new { error = "Order not found", orderId = orderId });
+        //        }
                 
-                var order = orderResult.Data;
-                if (string.IsNullOrEmpty(order.PayOSOrderCode))
-                {
-                    return BadRequest(new { error = "Order does not have PayOSOrderCode", orderId = orderId });
-                }
+        //        var order = orderResult.Data;
+        //        if (string.IsNullOrEmpty(order.PayOSOrderCode))
+        //        {
+        //            return BadRequest(new { error = "Order does not have PayOSOrderCode", orderId = orderId });
+        //        }
                 
-                // Tạo webhook payload giả
-                var testWebhookData = new
-                {
-                    Code = "00",
-                    Desc = "success",
-                    Success = true,
-                    Data = new
-                    {
-                        OrderCode = long.Parse(order.PayOSOrderCode),
-                        Amount = (int)order.FinalPrice,
-                        Description = $"Payment for Order {order.Id}",
-                        Reference = "TEST_REF_" + Guid.NewGuid().ToString("N")[..8],
-                        TransactionDateTime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
-                        Currency = "VND",
-                        Status = "PAID"
-                    },
-                    Signature = "test_signature_" + Guid.NewGuid().ToString("N")[..16]
-                };
+        //        // Tạo webhook payload giả
+        //        var testWebhookData = new
+        //        {
+        //            Code = "00",
+        //            Desc = "success",
+        //            Success = true,
+        //            Data = new
+        //            {
+        //                OrderCode = long.Parse(order.PayOSOrderCode),
+        //                Amount = (int)order.FinalPrice,
+        //                Description = $"Payment for Order {order.Id}",
+        //                Reference = "TEST_REF_" + Guid.NewGuid().ToString("N")[..8],
+        //                TransactionDateTime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
+        //                Currency = "VND",
+        //                Status = "PAID"
+        //            },
+        //            Signature = "test_signature_" + Guid.NewGuid().ToString("N")[..16]
+        //        };
                 
-                _logger.LogInformation("Testing webhook with PayOSOrderCode: {PayOSOrderCode}", order.PayOSOrderCode);
+        //        _logger.LogInformation("Testing webhook with PayOSOrderCode: {PayOSOrderCode}", order.PayOSOrderCode);
                 
-                // Gọi method xử lý webhook
-                var result = await _orderService.UpdateOrderStatusByOrderCodeAsync(
-                    order.PayOSOrderCode, 
-                    BusinessObjects.Common.OrderStatus.Completed
-                );
+        //        // Gọi method xử lý webhook
+        //        var result = await _orderService.UpdateOrderStatusByOrderCodeAsync(
+        //            order.PayOSOrderCode, 
+        //            BusinessObjects.Common.OrderStatus.Completed
+        //        );
                 
-                _logger.LogInformation("Webhook test result: {Result}", result.IsSuccess ? "SUCCESS" : "FAILED");
-                if (!result.IsSuccess)
-                {
-                    _logger.LogWarning("Webhook test failed: {Message}", result.Message);
-                }
+        //        _logger.LogInformation("Webhook test result: {Result}", result.IsSuccess ? "SUCCESS" : "FAILED");
+        //        if (!result.IsSuccess)
+        //        {
+        //            _logger.LogWarning("Webhook test failed: {Message}", result.Message);
+        //        }
                 
-                return Ok(new { 
-                    message = "Webhook test completed",
-                    orderId = orderId,
-                    payOSOrderCode = order.PayOSOrderCode,
-                    result = result.IsSuccess ? "SUCCESS" : "FAILED",
-                    details = result.Message,
-                    testPayload = testWebhookData
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in webhook test for order {OrderId}", orderId);
-                return StatusCode(500, new { error = ex.Message });
-            }
-        }
+        //        return Ok(new { 
+        //            message = "Webhook test completed",
+        //            orderId = orderId,
+        //            payOSOrderCode = order.PayOSOrderCode,
+        //            result = result.IsSuccess ? "SUCCESS" : "FAILED",
+        //            details = result.Message,
+        //            testPayload = testWebhookData
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error in webhook test for order {OrderId}", orderId);
+        //        return StatusCode(500, new { error = ex.Message });
+        //    }
+        //}
 
-        [HttpPost("test-real")]
-        public async Task<IActionResult> TestRealWebhook()
-        {
-            try
-            {
-                _logger.LogInformation("=== TESTING REAL PAYOS WEBHOOK PROCESSING ===");
+        //[HttpPost("test-real")]
+        //public async Task<IActionResult> TestRealWebhook()
+        //{
+        //    try
+        //    {
+        //        _logger.LogInformation("=== TESTING REAL PAYOS WEBHOOK PROCESSING ===");
                 
-                // Tạo test order code
-                var testOrderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+        //        // Tạo test order code
+        //        var testOrderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
                 
-                // Test với real webhook data structure
-                var testWebhookData = new
-                {
-                    Event = "payment.success",
-                    Data = new
-                    {
-                        OrderCode = testOrderCode,
-                        Amount = 50000,
-                        Status = "PAID",
-                        TransactionDateTime = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")
-                    }
-                };
+        //        // Test với real webhook data structure
+        //        var testWebhookData = new
+        //        {
+        //            Event = "payment.success",
+        //            Data = new
+        //            {
+        //                OrderCode = testOrderCode,
+        //                Amount = 50000,
+        //                Status = "PAID",
+        //                TransactionDateTime = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")
+        //            }
+        //        };
 
-                _logger.LogInformation("Testing with order code: {OrderCode}", testOrderCode);
+        //        _logger.LogInformation("Testing with order code: {OrderCode}", testOrderCode);
                 
-                // Gọi method thực sự để test
-                var result = await _orderService.UpdateOrderStatusByOrderCodeAsync(
-                    testOrderCode, 
-                    BusinessObjects.Common.OrderStatus.Completed
-                );
+        //        // Gọi method thực sự để test
+        //        var result = await _orderService.UpdateOrderStatusByOrderCodeAsync(
+        //            testOrderCode, 
+        //            BusinessObjects.Common.OrderStatus.Completed
+        //        );
 
-                _logger.LogInformation("Test result: {Result}", result.IsSuccess ? "SUCCESS" : "FAILED");
-                if (!result.IsSuccess)
-                {
-                    _logger.LogWarning("Test failed: {Message}", result.Message);
-                }
+        //        _logger.LogInformation("Test result: {Result}", result.IsSuccess ? "SUCCESS" : "FAILED");
+        //        if (!result.IsSuccess)
+        //        {
+        //            _logger.LogWarning("Test failed: {Message}", result.Message);
+        //        }
 
-                return Ok(new { 
-                    message = "Real webhook test completed",
-                    orderCode = testOrderCode,
-                    result = result.IsSuccess ? "SUCCESS" : "FAILED",
-                    details = result.Message
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in real webhook test");
-                return StatusCode(500, new { error = ex.Message });
-            }
-        }
+        //        return Ok(new { 
+        //            message = "Real webhook test completed",
+        //            orderCode = testOrderCode,
+        //            result = result.IsSuccess ? "SUCCESS" : "FAILED",
+        //            details = result.Message
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error in real webhook test");
+        //        return StatusCode(500, new { error = ex.Message });
+        //    }
+        //}
 
         [HttpPost("webhook")]
         public async Task<IActionResult> ReceiveWebhook()
