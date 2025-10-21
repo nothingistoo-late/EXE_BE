@@ -227,7 +227,10 @@ namespace Services.Implementations
             {
                 var orders = await _unitOfWork.OrderRepository.GetAllAsync(o => o.Status != OrderStatus.Cart, includes: o=> o.OrderDetails);
 
-                if (orders == null || orders.Count == 0)
+                orders = orders
+                    .OrderByDescending(o => o.CreatedAt)
+                    .ThenByDescending(o => o.Status) // hoặc ThenByDescending(o => o.Status)
+                    .ToList(); if (orders == null || orders.Count == 0)
                     return ApiResult<List<OrderResponse>>.Failure(new Exception("Không tìm thấy đơn hàng nào!!"));
 
                 var response = _mapper.Map<List<OrderResponse>>(orders);

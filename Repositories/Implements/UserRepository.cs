@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Repositories.WorkSeeds.Implements;
 
-namespace Repositories.Implementations
+namespace Repositories.Implements
 {
     public class UserRepository : GenericRepository<User,Guid>, IUserRepository
     {

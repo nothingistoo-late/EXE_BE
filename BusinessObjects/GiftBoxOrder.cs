@@ -21,7 +21,16 @@ namespace BusinessObjects
         [MaxLength(500)]
         public string GreetingMessage { get; set; } = string.Empty;
         
+        [Required]
+        [MaxLength(1000)]
+        public string BoxDescription { get; set; } = string.Empty;
+        
+        [Required]
+        [MaxLength(1000)]
+        public string LetterScription { get; set; } = string.Empty;
+        
         // Navigation properties
         public virtual Order Order { get; set; } = null!;
+        public virtual Review? Review { get; set; }
     }
 }

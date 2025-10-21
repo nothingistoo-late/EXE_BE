@@ -15,6 +15,8 @@ namespace Repositories.WorkSeeds.Interfaces
         ICustomerSubscriptionRepository CustomerSubscriptionRepository { get; }
         IHealthSurveyRepository HealthSurveyRepository { get; }
         IUserDiscountRepository UserDiscountRepository { get; }
+        IReviewRepository ReviewRepository { get; }
+        IGiftBoxOrderRepository GiftBoxOrderRepository { get; }
         
     }
 }

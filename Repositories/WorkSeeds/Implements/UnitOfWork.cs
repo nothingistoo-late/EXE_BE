@@ -23,6 +23,8 @@ namespace Repositories.WorkSeeds.Implements
         private ICustomerSubscriptionRepository? _customerSubscriptionRepository;
         private IHealthSurveyRepository? _healthSurveyRepository;
         private IUserDiscountRepository? _userDiscountRepository;
+        private IReviewRepository? _reviewRepository;
+        private IGiftBoxOrderRepository? _giftBoxOrderRepository;
         public UnitOfWork(EXE_BE context, IRepositoryFactory repositoryFactory, ILogger<UnitOfWork> logger)
         {
             _context = context;
@@ -51,6 +53,10 @@ namespace Repositories.WorkSeeds.Implements
             _healthSurveyRepository ??= _repositoryFactory.GetCustomRepository<IHealthSurveyRepository>();
         public IUserDiscountRepository UserDiscountRepository => 
             _userDiscountRepository ??= _repositoryFactory.GetCustomRepository<IUserDiscountRepository>();
+        public IReviewRepository ReviewRepository => 
+            _reviewRepository ??= _repositoryFactory.GetCustomRepository<IReviewRepository>();
+        public IGiftBoxOrderRepository GiftBoxOrderRepository => 
+            _giftBoxOrderRepository ??= _repositoryFactory.GetCustomRepository<IGiftBoxOrderRepository>();
         public IGenericRepository<TEntity, TKey> GetRepository<TEntity, TKey>()
             where TEntity : class
         {

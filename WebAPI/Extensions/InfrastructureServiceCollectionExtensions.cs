@@ -116,6 +116,8 @@ namespace WebAPI.Extensions
             services.AddScoped<IAiRecipeRepository, AiRecipeRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<IUserDiscountRepository, UserDiscountRepository>();
+            services.AddScoped<IGiftBoxOrderRepository, GiftBoxOrderRepository>();
+            services.AddScoped<IReviewRepository, ReviewRepository>();
 
             services.AddScoped<ICurrentUserService, CurrentUserService>();
             services.AddScoped<ITokenService, TokenService>();
@@ -158,6 +160,7 @@ namespace WebAPI.Extensions
             services.AddScoped<IGiftBoxService, GiftBoxService>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IPayOSService, PayOSService>();
+            services.AddScoped<IReviewService, ReviewService>();
             services.AddHttpContextAccessor();
             //services.AddScoped<IHealthSurveyService, HealthSurveyService>();
             services.AddHttpClient<ChatBoxAI.Services.IGeminiService, ChatBoxAI.Services.GeminiService>();
