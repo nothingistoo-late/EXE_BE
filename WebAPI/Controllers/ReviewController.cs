@@ -85,12 +85,12 @@ namespace WebAPI.Controllers
         }
 
         /// <summary>
-        /// Get review by gift box order ID
+        /// Get review by order ID
         /// </summary>
-        [HttpGet("gift-box-order/{giftBoxOrderId}")]
-        public async Task<IActionResult> GetReviewByGiftBoxOrderId(Guid giftBoxOrderId)
+        [HttpGet("order/{orderId}")]
+        public async Task<IActionResult> GetReviewByOrderId(Guid orderId)
         {
-            var result = await _reviewService.GetReviewByGiftBoxOrderIdAsync(giftBoxOrderId);
+            var result = await _reviewService.GetReviewByOrderIdAsync(orderId);
             
             if (result.IsSuccess)
             {
@@ -120,12 +120,12 @@ namespace WebAPI.Controllers
         }
 
         /// <summary>
-        /// Get reviews by order ID
+        /// Get review statistics
         /// </summary>
-        [HttpGet("order/{orderId}")]
-        public async Task<IActionResult> GetReviewsByOrderId(Guid orderId)
+        [HttpGet("statistics")]
+        public async Task<IActionResult> GetReviewStatistics()
         {
-            var result = await _reviewService.GetReviewsByOrderIdAsync(orderId);
+            var result = await _reviewService.GetReviewStatisticsAsync();
             
             if (result.IsSuccess)
             {
@@ -136,12 +136,12 @@ namespace WebAPI.Controllers
         }
 
         /// <summary>
-        /// Get review statistics
+        /// Get review statistics by box type
         /// </summary>
-        [HttpGet("statistics")]
-        public async Task<IActionResult> GetReviewStatistics()
+        [HttpGet("statistics/box-type/{boxTypeId}")]
+        public async Task<IActionResult> GetReviewStatisticsByBoxType(Guid boxTypeId)
         {
-            var result = await _reviewService.GetReviewStatisticsAsync();
+            var result = await _reviewService.GetReviewStatisticsByBoxTypeAsync(boxTypeId);
             
             if (result.IsSuccess)
             {

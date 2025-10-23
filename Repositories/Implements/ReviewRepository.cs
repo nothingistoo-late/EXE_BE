@@ -15,19 +15,19 @@ namespace Repositories.Implements
             _context = context;
         }
 
-        public async Task<Review?> GetByGiftBoxOrderIdAsync(Guid giftBoxOrderId)
+        public async Task<Review?> GetByOrderIdAsync(Guid orderId)
         {
             return await FirstOrDefaultAsync(
-                r => r.GiftBoxOrderId == giftBoxOrderId && !r.IsDeleted,
-                r => r.GiftBoxOrder, r => r.GiftBoxOrder.Order);
+                r => r.OrderId == orderId && !r.IsDeleted,
+                r => r.Order);
         }
 
         public async Task<List<Review>> GetReviewsByOrderIdAsync(Guid orderId)
         {
             var result = await GetAllAsync(
-                r => r.GiftBoxOrder.OrderId == orderId && !r.IsDeleted,
+                r => r.OrderId == orderId && !r.IsDeleted,
                 query => query.OrderByDescending(r => r.CreatedAt),
-                r => r.GiftBoxOrder, r => r.GiftBoxOrder.Order);
+                r => r.Order);
             return result.ToList();
         }
 
@@ -38,7 +38,7 @@ namespace Repositories.Implements
                 pageSize,
                 r => !r.IsDeleted,
                 query => query.OrderByDescending(r => r.CreatedAt),
-                r => r.GiftBoxOrder, r => r.GiftBoxOrder.Order);
+                r => r.Order);
             
             return pagedResult.ToList();
         }
@@ -58,6 +58,34 @@ namespace Repositories.Implements
         public async Task<int> GetTotalReviewsCountAsync()
         {
             return await CountAsync(r => !r.IsDeleted);
+        }
+
+        public async Task<double> GetAverageServiceRatingByBoxTypeAsync(Guid boxTypeId)
+        {
+            var reviews = await _context.Reviews
+                .Include(r => r.Order)
+                .ThenInclude(o => o.OrderDetails)
+                .Where(r => !r.IsDeleted && r.Order.OrderDetails.Any(od => od.BoxTypeId == boxTypeId))
+                .ToListAsync();
+            return reviews.Any() ? reviews.Average(r => r.ServiceQualityRating) : 0;
+        }
+
+        public async Task<double> GetAverageProductRatingByBoxTypeAsync(Guid boxTypeId)
+        {
+            var reviews = await _context.Reviews
+                .Include(r => r.Order)
+                .ThenInclude(o => o.OrderDetails)
+                .Where(r => !r.IsDeleted && r.Order.OrderDetails.Any(od => od.BoxTypeId == boxTypeId))
+                .ToListAsync();
+            return reviews.Any() ? reviews.Average(r => r.ProductQualityRating) : 0;
+        }
+
+        public async Task<int> GetReviewsCountByBoxTypeAsync(Guid boxTypeId)
+        {
+            return await _context.Reviews
+                .Include(r => r.Order)
+                .ThenInclude(o => o.OrderDetails)
+                .CountAsync(r => !r.IsDeleted && r.Order.OrderDetails.Any(od => od.BoxTypeId == boxTypeId));
         }
     }
 }

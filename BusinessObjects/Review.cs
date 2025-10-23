@@ -8,7 +8,7 @@ namespace BusinessObjects
         public Guid Id { get; set; } = Guid.NewGuid();
         
         [Required]
-        public Guid GiftBoxOrderId { get; set; }
+        public Guid OrderId { get; set; }
         
         [Required]
         [Range(1, 5, ErrorMessage = "Service quality rating must be between 1 and 5")]
@@ -22,7 +22,7 @@ namespace BusinessObjects
         public string ReviewContent { get; set; } = string.Empty;
         
         // Navigation properties
-        public virtual GiftBoxOrder GiftBoxOrder { get; set; } = null!;
+        public virtual Order Order { get; set; } = null!;
     }
 }
 

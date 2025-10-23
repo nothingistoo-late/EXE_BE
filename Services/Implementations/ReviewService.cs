@@ -24,23 +24,23 @@ namespace Services.Implementations
         {
             try
             {
-                // Check if gift box order exists
-                var giftBoxOrder = await _unitOfWork.GiftBoxOrderRepository.GetByIdAsync(request.GiftBoxOrderId);
-                if (giftBoxOrder == null)
+                // Check if order exists
+                var order = await _unitOfWork.OrderRepository.GetByIdAsync(request.OrderId);
+                if (order == null)
                 {
-                    return ApiResult<ReviewResponse>.Failure(new ArgumentException("Gift box order not found"));
+                    return ApiResult<ReviewResponse>.Failure(new ArgumentException("Order not found"));
                 }
 
-                // Check if review already exists for this gift box order
-                var existingReview = await _unitOfWork.ReviewRepository.GetByGiftBoxOrderIdAsync(request.GiftBoxOrderId);
+                // Check if review already exists for this order
+                var existingReview = await _unitOfWork.ReviewRepository.GetByOrderIdAsync(request.OrderId);
                 if (existingReview != null)
                 {
-                    return ApiResult<ReviewResponse>.Failure(new InvalidOperationException("Review already exists for this gift box order"));
+                    return ApiResult<ReviewResponse>.Failure(new InvalidOperationException("Review already exists for this order"));
                 }
 
                 var review = new Review
                 {
-                    GiftBoxOrderId = request.GiftBoxOrderId,
+                    OrderId = request.OrderId,
                     ServiceQualityRating = request.ServiceQualityRating,
                     ProductQualityRating = request.ProductQualityRating,
                     ReviewContent = request.ReviewContent,
@@ -52,7 +52,7 @@ namespace Services.Implementations
                 var response = new ReviewResponse
                 {
                     Id = review.Id,
-                    GiftBoxOrderId = review.GiftBoxOrderId,
+                    OrderId = review.OrderId,
                     ServiceQualityRating = review.ServiceQualityRating,
                     ProductQualityRating = review.ProductQualityRating,
                     ReviewContent = review.ReviewContent,
@@ -87,7 +87,7 @@ namespace Services.Implementations
                 var response = new ReviewResponse
                 {
                     Id = review.Id,
-                    GiftBoxOrderId = review.GiftBoxOrderId,
+                    OrderId = review.OrderId,
                     ServiceQualityRating = review.ServiceQualityRating,
                     ProductQualityRating = review.ProductQualityRating,
                     ReviewContent = review.ReviewContent,
@@ -116,7 +116,7 @@ namespace Services.Implementations
                 var response = new ReviewResponse
                 {
                     Id = review.Id,
-                    GiftBoxOrderId = review.GiftBoxOrderId,
+                    OrderId = review.OrderId,
                     ServiceQualityRating = review.ServiceQualityRating,
                     ProductQualityRating = review.ProductQualityRating,
                     ReviewContent = review.ReviewContent,
@@ -142,25 +142,26 @@ namespace Services.Implementations
                     return ApiResult<ReviewDetailResponse>.Failure(new ArgumentException("Review not found"));
                 }
 
-                var giftBoxOrder = await _unitOfWork.GiftBoxOrderRepository.GetByIdAsync(review.GiftBoxOrderId);
-                if (giftBoxOrder == null)
+                var order = await _unitOfWork.OrderRepository.GetByIdAsync(review.OrderId);
+                if (order == null)
                 {
-                    return ApiResult<ReviewDetailResponse>.Failure(new ArgumentException("Gift box order not found"));
+                    return ApiResult<ReviewDetailResponse>.Failure(new ArgumentException("Order not found"));
                 }
+                var customer = await _unitOfWork.CustomerRepository.FirstOrDefaultAsync(o=> o.UserId== order.UserId);
 
                 var response = new ReviewDetailResponse
                 {
                     Id = review.Id,
-                    GiftBoxOrderId = review.GiftBoxOrderId,
+                    OrderId = review.OrderId,
                     ServiceQualityRating = review.ServiceQualityRating,
                     ProductQualityRating = review.ProductQualityRating,
                     ReviewContent = review.ReviewContent,
                     CreatedAt = review.CreatedAt,
                     UpdatedAt = review.UpdatedAt,
-                    OrderId = giftBoxOrder.OrderId.ToString(),
-                    GreetingMessage = giftBoxOrder.GreetingMessage,
-                    BoxDescription = giftBoxOrder.BoxDescription,
-                    LetterScription = giftBoxOrder.LetterScription
+                    OrderCode = order.PayOSOrderCode ?? order.Id.ToString(),
+                    CustomerName = order.User?.FirstName + " " + order.User?.LastName ?? "N/A",
+                    CustomerPhone = order.User?.PhoneNumber ?? "N/A",
+                    CustomerAddress = customer.Address ?? "N/A" 
                 };
 
                 return ApiResult<ReviewDetailResponse>.Success(response, "Review detail retrieved successfully");
@@ -171,20 +172,20 @@ namespace Services.Implementations
             }
         }
 
-        public async Task<ApiResult<ReviewResponse>> GetReviewByGiftBoxOrderIdAsync(Guid giftBoxOrderId)
+        public async Task<ApiResult<ReviewResponse>> GetReviewByOrderIdAsync(Guid orderId)
         {
             try
             {
-                var review = await _unitOfWork.ReviewRepository.GetByGiftBoxOrderIdAsync(giftBoxOrderId);
+                var review = await _unitOfWork.ReviewRepository.GetByOrderIdAsync(orderId);
                 if (review == null)
                 {
-                    return ApiResult<ReviewResponse>.Failure(new ArgumentException("Review not found for this gift box order"));
+                    return ApiResult<ReviewResponse>.Failure(new ArgumentException("Review not found for this order"));
                 }
 
                 var response = new ReviewResponse
                 {
                     Id = review.Id,
-                    GiftBoxOrderId = review.GiftBoxOrderId,
+                    OrderId = review.OrderId,
                     ServiceQualityRating = review.ServiceQualityRating,
                     ProductQualityRating = review.ProductQualityRating,
                     ReviewContent = review.ReviewContent,
@@ -210,7 +211,7 @@ namespace Services.Implementations
                 var reviewResponses = reviews.Select(r => new ReviewResponse
                 {
                     Id = r.Id,
-                    GiftBoxOrderId = r.GiftBoxOrderId,
+                    OrderId = r.OrderId,
                     ServiceQualityRating = r.ServiceQualityRating,
                     ProductQualityRating = r.ProductQualityRating,
                     ReviewContent = r.ReviewContent,
@@ -237,7 +238,7 @@ namespace Services.Implementations
                 var reviewResponses = reviews.Select(r => new ReviewResponse
                 {
                     Id = r.Id,
-                    GiftBoxOrderId = r.GiftBoxOrderId,
+                    OrderId = r.OrderId,
                     ServiceQualityRating = r.ServiceQualityRating,
                     ProductQualityRating = r.ProductQualityRating,
                     ReviewContent = r.ReviewContent,
@@ -273,6 +274,38 @@ namespace Services.Implementations
             catch (Exception ex)
             {
                 return ApiResult<object>.Failure(new Exception($"Error getting review statistics: {ex.Message}"));
+            }
+        }
+
+        public async Task<ApiResult<object>> GetReviewStatisticsByBoxTypeAsync(Guid boxTypeId)
+        {
+            try
+            {
+                // Check if box type exists
+                var boxType = await _unitOfWork.BoxTypeRepository.GetByIdAsync(boxTypeId);
+                if (boxType == null)
+                {
+                    return ApiResult<object>.Failure(new ArgumentException("Box type not found"));
+                }
+
+                var averageServiceRating = await _unitOfWork.ReviewRepository.GetAverageServiceRatingByBoxTypeAsync(boxTypeId);
+                var averageProductRating = await _unitOfWork.ReviewRepository.GetAverageProductRatingByBoxTypeAsync(boxTypeId);
+                var totalReviews = await _unitOfWork.ReviewRepository.GetReviewsCountByBoxTypeAsync(boxTypeId);
+
+                var statistics = new
+                {
+                    BoxTypeId = boxTypeId,
+                    BoxTypeName = boxType.Name,
+                    AverageServiceRating = Math.Round(averageServiceRating, 2),
+                    AverageProductRating = Math.Round(averageProductRating, 2),
+                    TotalReviews = totalReviews
+                };
+
+                return ApiResult<object>.Success(statistics, "Box type review statistics retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return ApiResult<object>.Failure(new Exception($"Error getting box type review statistics: {ex.Message}"));
             }
         }
 
