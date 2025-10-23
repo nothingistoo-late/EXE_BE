@@ -34,6 +34,7 @@ namespace WebAPI.Controllers
         /// <summary>
         /// Tạo mới khách hàng (User + Customer)
         /// </summary>
+        [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> CreateCustomer([FromBody] CreateCustomerRequestDTO dto)
         {
