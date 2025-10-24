@@ -31,11 +31,11 @@ namespace WebAPI.Controllers
         [HttpGet]
         public async Task<IActionResult> GetRecipeByDate([FromQuery] DateTime? date = null)
         {
+            // Use today's date if no date provided
+            var targetDate = date ?? _currentTime.GetVietnamTime().Date;
+            
             try
             {
-                // Use today's date if no date provided
-                var targetDate = date ?? _currentTime.GetVietnamTime().Date;
-
                 var result = await _aiMenuService.GetRecipeByDateAsync(targetDate);
                 
                 if (!result.IsSuccess)
