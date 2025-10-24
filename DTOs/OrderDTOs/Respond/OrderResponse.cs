@@ -17,6 +17,8 @@ namespace DTOs.OrderDTOs.Respond
         public double FinalPrice { get; set; }
         public string? DiscountCode { get; set; }
         public string Address { get; set; } = string.Empty;  // Địa chỉ giao hàng
+        public string DeliveryTo { get; set; } = string.Empty;  // Tên người nhận
+        public string PhoneNumber { get; set; } = string.Empty;  // Số điện thoại người nhận
         public string PaymentMethod { get; set; } = string.Empty;
         public string PaymentStatus { get; set; } = string.Empty;
         public string? PayOSPaymentUrl { get; set; }

@@ -41,14 +41,24 @@ namespace Services.Implementations
         {
             try
             {
+                _logger.LogInformation("🛒 Starting order creation for user {UserId} with {ItemCount} items", 
+                    request.UserId, request.Items?.Count ?? 0);
+
                 if (request.Items == null || !request.Items.Any())
+                {
+                    _logger.LogWarning("❌ Order creation failed: No items provided for user {UserId}", request.UserId);
                     return ApiResult<OrderResponse>.Failure(new Exception("Đơn đặt hàng phải có ít nhất 1 sản phẩm!!!"));
+                }
 
                 return await _unitOfWork.ExecuteTransactionAsync(async () =>
                 {
+                    _logger.LogDebug("🔍 Validating user existence for {UserId}", request.UserId);
                     var userExists = await _unitOfWork.UserRepository.AnyAsync(u => u.Id == request.UserId);
                     if (!userExists)
+                    {
+                        _logger.LogWarning("❌ User not found: {UserId}", request.UserId);
                         return ApiResult<OrderResponse>.Failure(new Exception("Không tìm thấy người dùng với Id : ." + request.UserId));
+                    }
 
                     var order = new Order
                     {
@@ -58,6 +68,8 @@ namespace Services.Implementations
                         DeliveryMethod = request.DeliveryMethod,
                         PaymentMethod = request.PaymentMethod,
                         Address = request.Address,
+                        DeliveryTo = request.DeliveryTo,
+                        PhoneNumber = request.PhoneNumber,
                         OrderDetails = new List<OrderDetail>(),
                         CreatedAt = _currentTime.GetVietnamTime(),
                         UpdatedAt = _currentTime.GetVietnamTime(),
@@ -65,14 +77,28 @@ namespace Services.Implementations
                         UpdatedBy = _currentUserService.GetUserId() ?? Guid.Empty
                     };
 
+                    _logger.LogInformation("📦 Creating order {OrderId} for user {UserId}", order.Id, request.UserId);
+
                     foreach (var item in request.Items)
                     {
+                        _logger.LogDebug("🔍 Processing item: BoxType {BoxTypeId}, Quantity {Quantity}", 
+                            item.BoxTypeId, item.Quantity);
+
                         if (item.Quantity <= 0)
+                        {
+                            _logger.LogWarning("❌ Invalid quantity for BoxType {BoxTypeId}: {Quantity}", 
+                                item.BoxTypeId, item.Quantity);
                             return ApiResult<OrderResponse>.Failure(new Exception($"Số lượng đặt hàng của Boxtype {item.BoxTypeId} không hợp lí, số lượng bạn đặt đang là : " + item.Quantity));
+                        }
 
                         var box = await _unitOfWork.BoxTypeRepository.GetByIdAsync(item.BoxTypeId);
                         if (box == null)
+                        {
+                            _logger.LogWarning("❌ BoxType not found: {BoxTypeId}", item.BoxTypeId);
                             return ApiResult<OrderResponse>.Failure(new Exception($"BoxType {item.BoxTypeId} không tìm thấy, xin kiểm tra và hãy thử lại!!"));
+                        }
+
+                        _logger.LogDebug("✅ Found BoxType {BoxTypeId} with price {Price}", item.BoxTypeId, box.Price);
 
                         var orderDetail = new OrderDetail
                         {
@@ -87,34 +113,56 @@ namespace Services.Implementations
                             UpdatedBy = _currentUserService.GetUserId() ?? Guid.Empty
                         };
                         order.OrderDetails.Add(orderDetail);
+                        _logger.LogDebug("✅ Added order detail: {BoxTypeId} x {Quantity} = {SubTotal}", 
+                            item.BoxTypeId, item.Quantity, box.Price * item.Quantity);
                     }
 
                     order.TotalPrice = order.OrderDetails.Sum(d => d.UnitPrice * d.Quantity);
                     order.FinalPrice = order.TotalPrice;
 
+                    _logger.LogInformation("💰 Order {OrderId} total price: {TotalPrice} VNĐ", 
+                        order.Id, order.TotalPrice);
+
                     if (!string.IsNullOrWhiteSpace(request.DiscountCode))
                     {
+                        _logger.LogInformation("🎫 Applying discount code: {DiscountCode} for order {OrderId}", 
+                            request.DiscountCode, order.Id);
+                        
                         order.DiscountCode = request.DiscountCode;
                         var discount = await _unitOfWork.DiscountRepository
                             .GetActiveDiscountByCodeAsync(request.DiscountCode);
 
                         if (discount == null)
+                        {
+                            _logger.LogWarning("❌ Invalid discount code: {DiscountCode}", request.DiscountCode);
                             return ApiResult<OrderResponse>.Failure(new Exception("Mã giảm giá không tồn tại hoặc đã hết hạn!!"));
+                        }
+
+                        _logger.LogDebug("✅ Found valid discount: {DiscountCode}, Value: {DiscountValue}%", 
+                            request.DiscountCode, discount.DiscountValue);
 
                         // Check if user has already used this discount
                         var hasUsedDiscount = await _unitOfWork.UserDiscountRepository
                             .HasUserUsedDiscountAsync(request.UserId, discount.Id);
 
                         if (hasUsedDiscount)
+                        {
+                            _logger.LogWarning("❌ User {UserId} already used discount {DiscountCode}", 
+                                request.UserId, request.DiscountCode);
                             return ApiResult<OrderResponse>.Failure(new Exception("Bạn đã sử dụng mã giảm giá này rồi, hãy thử mã khác nhé!!"));
+                        }
 
                         // Apply discount
+                        var originalPrice = order.FinalPrice;
                         order.FinalPrice = discount.IsPercentage
                             ? order.TotalPrice * (1 - discount.DiscountValue / 100)
                             : order.TotalPrice - discount.DiscountValue;
 
                         if (order.FinalPrice < 0)
                             order.FinalPrice = 0;
+
+                        _logger.LogInformation("🎫 Discount applied: {OriginalPrice} -> {FinalPrice} (Saved: {Savings})", 
+                            originalPrice, order.FinalPrice, originalPrice - order.FinalPrice);
 
                         // Create UserDiscount record
                         var userDiscount = new UserDiscount
@@ -130,45 +178,66 @@ namespace Services.Implementations
                         };
 
                         await _unitOfWork.UserDiscountRepository.AddAsync(userDiscount);
+                        _logger.LogDebug("✅ UserDiscount record created for user {UserId}", request.UserId);
                     }
 
+                    _logger.LogInformation("💾 Saving order {OrderId} to database", order.Id);
                     await _unitOfWork.OrderRepository.AddAsync(order);
                     await _unitOfWork.SaveChangesAsync();
                     
+                    _logger.LogInformation("📊 Order {OrderId} saved successfully. Final price: {FinalPrice} VNĐ", 
+                        order.Id, order.FinalPrice);
+                    
                     // Theo dõi đơn hàng pending
                     _pendingOrderTrackingService.TrackPendingOrder(order.Id);
+                    _logger.LogDebug("📈 Order {OrderId} added to pending tracking", order.Id);
 
                     // Gửi email xác nhận đơn hàng cho khách hàng và thông báo cho admin
                     try
                     {
+                        _logger.LogInformation("📧 Sending order confirmation emails for order {OrderId}", order.Id);
                         var user = await _unitOfWork.UserRepository.GetByIdAsync(request.UserId);
                         if (user != null)
                         {
+                            _logger.LogDebug("📧 Sending confirmation email to {Email}", user.Email);
                             // Gửi email xác nhận cho khách hàng
                             await _emailService.SendOrderConfirmationEmailAsync(user.Email, order);
                             
+                            _logger.LogDebug("📧 Sending admin notification for order {OrderId}", order.Id);
                             // Gửi thông báo cho admin
                             await _emailService.SendNewOrderNotificationToAdminAsync(order);
                             
                             // Gửi cảnh báo đơn hàng giá trị cao (ngưỡng 10 triệu VNĐ)
                             if (order.FinalPrice > 1000000)
                             {
+                                _logger.LogWarning("💰 High value order detected: {OrderId} - {FinalPrice} VNĐ", 
+                                    order.Id, order.FinalPrice);
                                 await _emailService.SendHighValueOrderAlertAsync(order, 1000000);
                             }
+                            
+                            _logger.LogInformation("✅ All emails sent successfully for order {OrderId}", order.Id);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("❌ User not found for email notification: {UserId}", request.UserId);
                         }
                     }
                     catch (Exception emailEx)
                     {
+                        _logger.LogError(emailEx, "❌ Failed to send emails for order {OrderId}", order.Id);
                         // Log lỗi email nhưng không làm fail transaction
                         // Có thể log vào file hoặc database
                     }
 
+                    _logger.LogInformation("🎉 Order {OrderId} created successfully for user {UserId}", 
+                        order.Id, request.UserId);
                     var response = _mapper.Map<OrderResponse>(order);
                     return ApiResult<OrderResponse>.Success(response, "Tạo đơn hàng thành công!!.");
                 });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "❌ Failed to create order for user {UserId}", request.UserId);
                 return ApiResult<OrderResponse>.Failure(ex);
             }
         }
@@ -685,6 +754,272 @@ namespace Services.Implementations
             {
                 // Log lỗi email nhưng không làm fail transaction
                 _logger.LogError(emailEx, "Error sending email for order {OrderId}", order.Id);
+            }
+        }
+
+        /// <summary>
+        /// Tạo gói hàng tuần - 2 đơn hàng với giá ưu đãi 250k thay vì 300k
+        /// Mỗi đơn hàng cách nhau 3 ngày
+        /// </summary>
+        public async Task<ApiResult<WeeklyPackageResponse>> CreateWeeklyPackageAsync(CreateWeeklyPackageRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("📦 Starting weekly package creation for user {UserId} with {ItemCount} items", 
+                    request.UserId, request.Items?.Count ?? 0);
+
+                // Validate request
+                if (request.Items == null || !request.Items.Any())
+                {
+                    _logger.LogWarning("❌ Weekly package creation failed: No items provided for user {UserId}", request.UserId);
+                    return ApiResult<WeeklyPackageResponse>.Failure(new Exception("Gói hàng tuần phải có ít nhất 1 sản phẩm!!!"));
+                }
+
+                if (request.DeliveryStartDate < _currentTime.GetVietnamTime().Date)
+                {
+                    _logger.LogWarning("❌ Invalid delivery start date: {DeliveryStartDate} for user {UserId}", 
+                        request.DeliveryStartDate, request.UserId);
+                    return ApiResult<WeeklyPackageResponse>.Failure(new Exception("Ngày bắt đầu giao hàng không được trong quá khứ!!!"));
+                }
+
+                return await _unitOfWork.ExecuteTransactionAsync(async () =>
+                {
+                    // 1. Validate user exists
+                    _logger.LogDebug("🔍 Validating user existence for weekly package: {UserId}", request.UserId);
+                    var userExists = await _unitOfWork.UserRepository.AnyAsync(u => u.Id == request.UserId);
+                    if (!userExists)
+                    {
+                        _logger.LogWarning("❌ User not found for weekly package: {UserId}", request.UserId);
+                        return ApiResult<WeeklyPackageResponse>.Failure(new Exception("Không tìm thấy người dùng với Id: " + request.UserId));
+                    }
+
+                    // 2. Generate unique WeeklyPackageId
+                    var weeklyPackageId = Guid.NewGuid();
+                    _logger.LogInformation("📦 Generated WeeklyPackageId: {WeeklyPackageId} for user {UserId}", 
+                        weeklyPackageId, request.UserId);
+
+                    // 3. Calculate delivery dates (3 days apart)
+                    var firstDeliveryDate = request.DeliveryStartDate;
+                    var secondDeliveryDate = firstDeliveryDate.AddDays(3);
+                    
+                    _logger.LogInformation("📅 Weekly package delivery schedule: First: {FirstDate}, Second: {SecondDate}", 
+                        firstDeliveryDate.ToString("dd/MM/yyyy"), secondDeliveryDate.ToString("dd/MM/yyyy"));
+
+                    // 4. Calculate pricing
+                    _logger.LogDebug("💰 Calculating pricing for weekly package");
+                    var normalTotalPrice = 0.0;
+                    foreach (var item in request.Items)
+                    {
+                        var box = await _unitOfWork.BoxTypeRepository.GetByIdAsync(item.BoxTypeId);
+                        normalTotalPrice += (box?.Price ?? 0) * item.Quantity;
+                        _logger.LogDebug("📦 Item pricing: BoxType {BoxTypeId} x {Quantity} = {SubTotal}", 
+                            item.BoxTypeId, item.Quantity, (box?.Price ?? 0) * item.Quantity);
+                    }
+
+                    var weeklyPackagePrice = request.WeeklyPackagePrice; // 250k
+                    var savings = (normalTotalPrice * 2) - weeklyPackagePrice; // Savings compared to 2 separate orders
+                    
+                    _logger.LogInformation("💰 Weekly package pricing: Normal total: {NormalTotal}, Package price: {PackagePrice}, Savings: {Savings}", 
+                        normalTotalPrice * 2, weeklyPackagePrice, savings);
+
+                    // 5. Create first order (immediate delivery)
+                    _logger.LogInformation("📦 Creating first order for weekly package {WeeklyPackageId}", weeklyPackageId);
+                    var firstOrder = await CreateWeeklyOrderAsync(
+                        request, 
+                        weeklyPackageId, 
+                        firstDeliveryDate, 
+                        weeklyPackagePrice / 2, // Split the package price between two orders
+                        "Đơn hàng 1/2 - Gói hàng tuần"
+                    );
+
+                    if (!firstOrder.IsSuccess)
+                    {
+                        _logger.LogError("❌ Failed to create first order for weekly package {WeeklyPackageId}: {Error}", 
+                            weeklyPackageId, firstOrder.Exception?.Message);
+                        return ApiResult<WeeklyPackageResponse>.Failure(firstOrder.Exception ?? new Exception("Failed to create first order"));
+                    }
+                    
+                    _logger.LogInformation("✅ First order created successfully: {OrderId}", firstOrder.Data?.Id);
+
+                    // 6. Create second order (3 days later)
+                    _logger.LogInformation("📦 Creating second order for weekly package {WeeklyPackageId}", weeklyPackageId);
+                    var secondOrder = await CreateWeeklyOrderAsync(
+                        request, 
+                        weeklyPackageId, 
+                        secondDeliveryDate, 
+                        weeklyPackagePrice / 2, // Split the package price between two orders
+                        "Đơn hàng 2/2 - Gói hàng tuần"
+                    );
+
+                    if (!secondOrder.IsSuccess)
+                    {
+                        _logger.LogError("❌ Failed to create second order for weekly package {WeeklyPackageId}: {Error}", 
+                            weeklyPackageId, secondOrder.Exception?.Message);
+                        return ApiResult<WeeklyPackageResponse>.Failure(secondOrder.Exception ?? new Exception("Failed to create second order"));
+                    }
+                    
+                    _logger.LogInformation("✅ Second order created successfully: {OrderId}", secondOrder.Data?.Id);
+
+                    // 7. Create response
+                    _logger.LogInformation("📋 Creating weekly package response for {WeeklyPackageId}", weeklyPackageId);
+                    var response = new WeeklyPackageResponse
+                    {
+                        WeeklyPackageId = weeklyPackageId,
+                        TotalPackagePrice = weeklyPackagePrice,
+                        Savings = savings,
+                        DeliveryStartDate = firstDeliveryDate,
+                        SecondDeliveryDate = secondDeliveryDate,
+                        Orders = new List<WeeklyOrderResponse>
+                        {
+                            _mapper.Map<WeeklyOrderResponse>(firstOrder.Data),
+                            _mapper.Map<WeeklyOrderResponse>(secondOrder.Data)
+                        }
+                    };
+
+                    _logger.LogInformation("🎉 Weekly package {WeeklyPackageId} created successfully! Total savings: {Savings:N0} VNĐ", 
+                        weeklyPackageId, savings);
+                    return ApiResult<WeeklyPackageResponse>.Success(response, 
+                        $"Tạo gói hàng tuần thành công! Tiết kiệm được {savings:N0} VNĐ. " +
+                        $"Đơn hàng đầu tiên: {firstDeliveryDate:dd/MM/yyyy}, " +
+                        $"Đơn hàng thứ hai: {secondDeliveryDate:dd/MM/yyyy}");
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Failed to create weekly package for user {UserId}", request.UserId);
+                return ApiResult<WeeklyPackageResponse>.Failure(ex);
+            }
+        }
+
+        /// <summary>
+        /// Helper method để tạo một đơn hàng trong gói hàng tuần
+        /// </summary>
+        private async Task<ApiResult<OrderResponse>> CreateWeeklyOrderAsync(
+            CreateWeeklyPackageRequest request, 
+            Guid weeklyPackageId, 
+            DateTime deliveryDate, 
+            double orderPrice,
+            string orderNote)
+        {
+            try
+            {
+                // Create order entity
+                var order = new Order
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = request.UserId,
+                    Status = OrderStatus.Pending,
+                    DeliveryMethod = request.DeliveryMethod,
+                    PaymentMethod = request.PaymentMethod,
+                    Address = request.Address,
+                    DeliveryTo = request.DeliveryTo,
+                    PhoneNumber = request.PhoneNumber,
+                    IsWeeklyPackage = true,
+                    WeeklyPackageId = weeklyPackageId,
+                    ScheduledDeliveryDate = deliveryDate,
+                    OrderDetails = new List<OrderDetail>(),
+                    CreatedAt = _currentTime.GetVietnamTime(),
+                    UpdatedAt = _currentTime.GetVietnamTime(),
+                    CreatedBy = _currentUserService.GetUserId() ?? Guid.Empty,
+                    UpdatedBy = _currentUserService.GetUserId() ?? Guid.Empty
+                };
+
+                // Add order details
+                foreach (var item in request.Items)
+                {
+                    if (item.Quantity <= 0)
+                        return ApiResult<OrderResponse>.Failure(new Exception($"Số lượng đặt hàng của Boxtype {item.BoxTypeId} không hợp lí: {item.Quantity}"));
+
+                    var box = await _unitOfWork.BoxTypeRepository.GetByIdAsync(item.BoxTypeId);
+                    if (box == null)
+                        return ApiResult<OrderResponse>.Failure(new Exception($"BoxType {item.BoxTypeId} không tìm thấy"));
+
+                    var orderDetail = new OrderDetail
+                    {
+                        Id = Guid.NewGuid(),
+                        OrderId = order.Id,
+                        BoxTypeId = item.BoxTypeId,
+                        Quantity = item.Quantity,
+                        UnitPrice = box.Price,
+                        CreatedAt = _currentTime.GetVietnamTime(),
+                        UpdatedAt = _currentTime.GetVietnamTime(),
+                        CreatedBy = _currentUserService.GetUserId() ?? Guid.Empty,
+                        UpdatedBy = _currentUserService.GetUserId() ?? Guid.Empty
+                    };
+                    order.OrderDetails.Add(orderDetail);
+                }
+
+                // Set pricing
+                order.TotalPrice = order.OrderDetails.Sum(d => d.UnitPrice * d.Quantity);
+                order.FinalPrice = orderPrice; // Use the split package price
+
+                // Apply discount if provided
+                if (!string.IsNullOrWhiteSpace(request.DiscountCode))
+                {
+                    order.DiscountCode = request.DiscountCode;
+                    var discount = await _unitOfWork.DiscountRepository.GetActiveDiscountByCodeAsync(request.DiscountCode);
+
+                    if (discount != null)
+                    {
+                        // Check if user has already used this discount
+                        var hasUsedDiscount = await _unitOfWork.UserDiscountRepository.HasUserUsedDiscountAsync(request.UserId, discount.Id);
+
+                        if (!hasUsedDiscount)
+                        {
+                            // Apply discount to the package price
+                            order.FinalPrice = discount.IsPercentage
+                                ? orderPrice * (1 - discount.DiscountValue / 100)
+                                : orderPrice - discount.DiscountValue;
+
+                            if (order.FinalPrice < 0)
+                                order.FinalPrice = 0;
+
+                            // Create UserDiscount record
+                            var userDiscount = new UserDiscount
+                            {
+                                Id = Guid.NewGuid(),
+                                UserId = request.UserId,
+                                DiscountId = discount.Id,
+                                UsedAt = _currentTime.GetVietnamTime(),
+                                CreatedAt = _currentTime.GetVietnamTime(),
+                                UpdatedAt = _currentTime.GetVietnamTime(),
+                                CreatedBy = _currentUserService.GetUserId() ?? Guid.Empty,
+                                UpdatedBy = _currentUserService.GetUserId() ?? Guid.Empty
+                            };
+
+                            await _unitOfWork.UserDiscountRepository.AddAsync(userDiscount);
+                        }
+                    }
+                }
+
+                // Save order
+                await _unitOfWork.OrderRepository.AddAsync(order);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Track pending order
+                _pendingOrderTrackingService.TrackPendingOrder(order.Id);
+
+                // Send email notification
+                try
+                {
+                    var user = await _unitOfWork.UserRepository.GetByIdAsync(request.UserId);
+                    if (user != null)
+                    {
+                        await _emailService.SendOrderConfirmationEmailAsync(user.Email, order);
+                    }
+                }
+                catch (Exception emailEx)
+                {
+                    // Log email error but don't fail the transaction
+                    _logger.LogError(emailEx, "Error sending email for weekly package order {OrderId}", order.Id);
+                }
+
+                var response = _mapper.Map<OrderResponse>(order);
+                return ApiResult<OrderResponse>.Success(response, $"Tạo {orderNote} thành công");
+            }
+            catch (Exception ex)
+            {
+                return ApiResult<OrderResponse>.Failure(ex);
             }
         }
     }

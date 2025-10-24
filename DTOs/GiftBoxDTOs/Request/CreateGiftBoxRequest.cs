@@ -29,6 +29,14 @@ namespace DTOs.GiftBoxDTOs.Request
         [Required]
         [MaxLength(1000)]
         public string Address { get; set; } = string.Empty;  // Địa chỉ giao hàng
+        
+        [Required]
+        [MaxLength(100)]
+        public string DeliveryTo { get; set; } = string.Empty;  // Tên người nhận
+        
+        [Required]
+        [MaxLength(20)]
+        public string PhoneNumber { get; set; } = string.Empty;  // Số điện thoại người nhận
     }
 }
 

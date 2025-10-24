@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Repositories.WorkSeeds.Extensions;
 using Services.Commons.Gmail;
+using Microsoft.Extensions.Logging;
 
 namespace Services.Implementations
 {
@@ -17,12 +18,14 @@ namespace Services.Implementations
     {
         private readonly IMapper _mapper;
         private readonly IEXEGmailService _emailService;
+        private readonly ILogger<CartService> _logger;
 
         public CartService(IMapper mapper, IGenericRepository<Order, Guid> repository,
             ICurrentUserService currentUserService,
             IUnitOfWork unitOfWork,
             ICurrentTime currentTime,
-            IEXEGmailService emailService) :
+            IEXEGmailService emailService,
+            ILogger<CartService> logger) :
             base(repository,
                 currentUserService,
                 unitOfWork,
@@ -30,6 +33,7 @@ namespace Services.Implementations
         {
             _mapper = mapper;
             _emailService = emailService;
+            _logger = logger;
         }
 
         // ====================== GET CART ======================
@@ -37,23 +41,34 @@ namespace Services.Implementations
         {
             try
             {
+                _logger.LogInformation("🛒 Getting cart for user {UserId}", userId);
+                
                 var customer = await _unitOfWork.CustomerRepository
                       .FirstOrDefaultAsync(c => c.UserId == userId);
                 if (customer == null)
+                {
+                    _logger.LogWarning("❌ Customer not found for user {UserId}", userId);
                     return ApiResult<CartResponse>.Failure(new Exception("Không tìm thấy khách hàng với ID: " + userId));
+                }
 
                 var cart = await _unitOfWork.OrderRepository
                     .FirstOrDefaultAsync(o => o.UserId == userId && o.Status == OrderStatus.Cart,
                                             includes: o => o.OrderDetails);
 
                 if (cart == null)
+                {
+                    _logger.LogInformation("🛒 No cart found for user {UserId}", userId);
                     return ApiResult<CartResponse>.Failure(new Exception("Giỏ hàng của bạn đang trống!!"));
+                }
 
+                _logger.LogInformation("✅ Cart retrieved for user {UserId} with {ItemCount} items", 
+                    userId, cart.OrderDetails?.Count ?? 0);
                 var response = _mapper.Map<CartResponse>(cart);
                 return ApiResult<CartResponse>.Success(response, "Lấy giỏ hàng thành công!");
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "❌ Failed to get cart for user {UserId}", userId);
                 return ApiResult<CartResponse>.Failure(new Exception("Có lỗi khi lấy giỏ hàng, nội dung lỗi: "+ex.Message));
             }
         }
@@ -63,29 +78,54 @@ namespace Services.Implementations
         {
             try
             {
+                _logger.LogInformation("🛒 Adding item to cart for user {UserId}: BoxType {BoxTypeId}, Quantity {Quantity}", 
+                    userId, dto.BoxTypeId, dto.Quantity);
+                
                 return await _unitOfWork.ExecuteTransactionAsync(async () =>
                 {
                     // 1. Lấy customer
+                    _logger.LogDebug("🔍 Validating customer for user {UserId}", userId);
                     var customer = await _unitOfWork.CustomerRepository
                         .FirstOrDefaultAsync(c => c.UserId == userId);
                     if (customer == null)
+                    {
+                        _logger.LogWarning("❌ Customer not found for user {UserId}", userId);
                         return ApiResult<CartResponse>.Failure(
                             new Exception($"Không tìm thấy khách hàng với ID: {userId}"));
+                    }
 
                     if (dto.Quantity <= 0)
+                    {
+                        _logger.LogWarning("❌ Invalid quantity for user {UserId}: {Quantity}", userId, dto.Quantity);
                         return ApiResult<CartResponse>.Failure(
                             new Exception("Số lượng phải lớn hơn 0"));
+                    }
                     
                     if (dto.Quantity > 1000) // Giới hạn số lượng hợp lý
+                    {
+                        _logger.LogWarning("❌ Quantity too high for user {UserId}: {Quantity}", userId, dto.Quantity);
                         return ApiResult<CartResponse>.Failure(
                             new Exception("Số lượng không được vượt quá 1000"));
+                    }
 
                     // 2. Tìm giỏ hàng hiện có
+                    _logger.LogDebug("🔍 Looking for existing cart for user {UserId}", userId);
                     var existingCart = await _unitOfWork.OrderRepository
                         .FirstOrDefaultAsync(
                             o => o.UserId == userId && o.Status == OrderStatus.Cart,
                             includes: o => o.OrderDetails);
                     var isNewCart = existingCart == null;
+                    
+                    if (isNewCart)
+                    {
+                        _logger.LogInformation("🆕 Creating new cart for user {UserId}", userId);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("📦 Found existing cart {CartId} for user {UserId} with {ItemCount} items", 
+                            existingCart.Id, userId, existingCart.OrderDetails?.Count ?? 0);
+                    }
+                    
                     var cart = existingCart ?? new Order
                     {
                         Id = Guid.NewGuid(),
@@ -94,6 +134,17 @@ namespace Services.Implementations
                         TotalPrice = 0,
                         FinalPrice = 0,
                         OrderDetails = new List<OrderDetail>(),
+                        // Required fields for cart (will be updated during checkout)
+                        Address = "Temporary - Will be updated during checkout",
+                        DeliveryTo = "Temporary - Will be updated during checkout", 
+                        PhoneNumber = "Temporary - Will be updated during checkout",
+                        DeliveryMethod = DeliveryMethod.Standard, // Default delivery method
+                        PaymentMethod = PaymentMethod.CashOnDelivery, // Default payment method
+                        // Weekly Package fields (default values for cart)
+                        IsWeeklyPackage = false,
+                        WeeklyPackageId = null,
+                        ScheduledDeliveryDate = null,
+                        // BaseEntity fields
                         CreatedAt = _currentTime.GetVietnamTime(),
                         UpdatedAt = _currentTime.GetVietnamTime(),
                         CreatedBy = _currentUserService.GetUserId() ?? Guid.Empty,
@@ -102,14 +153,21 @@ namespace Services.Implementations
 
                     if (isNewCart)
                     {
+                        _logger.LogInformation("💾 Saving new cart {CartId} to database", cart.Id);
                         await _unitOfWork.OrderRepository.AddAsync(cart);
                     }
 
                     // 3. Kiểm tra BoxType
+                    _logger.LogDebug("🔍 Validating BoxType {BoxTypeId}", dto.BoxTypeId);
                     var box = await _unitOfWork.BoxTypeRepository.GetByIdAsync(dto.BoxTypeId);
                     if (box == null || box.IsDeleted)
+                    {
+                        _logger.LogWarning("❌ BoxType not found or deleted: {BoxTypeId}", dto.BoxTypeId);
                         return ApiResult<CartResponse>.Failure(
                             new Exception("BoxType không tồn tại!"));
+                    }
+                    
+                    _logger.LogDebug("✅ Found BoxType {BoxTypeId} with price {Price}", dto.BoxTypeId, box.Price);
 
                     // 4. Add hoặc update item trong cart
                     var existingItem = cart.OrderDetails
@@ -117,12 +175,17 @@ namespace Services.Implementations
 
                     if (existingItem != null)
                     {
+                        var oldQuantity = existingItem.Quantity;
                         existingItem.Quantity += dto.Quantity;
                         existingItem.UnitPrice = box.Price;
+                        _logger.LogInformation("📝 Updated existing item: BoxType {BoxTypeId}, Quantity {OldQuantity} -> {NewQuantity}", 
+                            dto.BoxTypeId, oldQuantity, existingItem.Quantity);
                         // Không cần UpdateAsync vì entity đang được track
                     }
                     else
                     {
+                        _logger.LogInformation("➕ Adding new item to cart: BoxType {BoxTypeId}, Quantity {Quantity}", 
+                            dto.BoxTypeId, dto.Quantity);
                         var detail = new OrderDetail
                         {
                             Id = Guid.NewGuid(),
@@ -137,18 +200,32 @@ namespace Services.Implementations
                         };
 
                         await _unitOfWork.OrderDetailRepository.AddAsync(detail);
+                        _logger.LogDebug("✅ OrderDetail added to cart: {OrderDetailId}", detail.Id);
                     }
 
-                    // 5. Tính lại giá
-                    cart.TotalPrice = cart.OrderDetails.Sum(i => i.Quantity * i.UnitPrice);
-                    cart.FinalPrice = cart.TotalPrice;
-
-                    // 6. SaveChanges một lần duy nhất
+                    // 5. SaveChanges trước khi tính giá để đảm bảo data consistency
+                    _logger.LogDebug("💾 Saving cart changes to database");
                     await _unitOfWork.SaveChangesAsync();
 
-                    // 7. Reload cart to avoid duplicated navigation fixups
+                    // 6. Reload cart để có data mới nhất
+                    _logger.LogDebug("🔄 Reloading cart to get fresh data");
                     var freshCart = await _unitOfWork.OrderRepository
                         .GetByIdAsync(cart.Id, includes: o => o.OrderDetails);
+                    
+                    if (freshCart != null)
+                    {
+                        // Tính lại giá với data mới nhất
+                        var oldTotalPrice = freshCart.TotalPrice;
+                        freshCart.TotalPrice = freshCart.OrderDetails.Sum(i => i.Quantity * i.UnitPrice);
+                        freshCart.FinalPrice = freshCart.TotalPrice;
+                        
+                        _logger.LogInformation("💰 Cart pricing updated: {OldTotal} -> {NewTotal} VNĐ", 
+                            oldTotalPrice, freshCart.TotalPrice);
+                        
+                        await _unitOfWork.SaveChangesAsync();
+                        _logger.LogInformation("✅ Cart {CartId} updated successfully with {ItemCount} items, Total: {TotalPrice} VNĐ", 
+                            freshCart.Id, freshCart.OrderDetails?.Count ?? 0, freshCart.TotalPrice);
+                    }
 
                     return ApiResult<CartResponse>.Success(
                         _mapper.Map<CartResponse>(freshCart ?? cart),
@@ -157,6 +234,8 @@ namespace Services.Implementations
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "❌ Failed to add item to cart for user {UserId}: BoxType {BoxTypeId}, Quantity {Quantity}", 
+                    userId, dto.BoxTypeId, dto.Quantity);
                 return ApiResult<CartResponse>.Failure(
                     new Exception("Có lỗi xảy ra khi thêm vào giỏ hàng, xin hãy thử lại sau!! " + ex.Message));
             }
@@ -209,7 +288,13 @@ namespace Services.Implementations
                     if (!cart.OrderDetails.Any())
                     {
                         await _unitOfWork.OrderRepository.DeleteAsync(cart.Id);
-                        return ApiResult<CartResponse>.Success(null, "Giỏ hàng đã được xóa vì không còn sản phẩm nào!");
+                        return ApiResult<CartResponse>.Success(new CartResponse 
+                        { 
+                            Id = Guid.Empty, 
+                            TotalPrice = 0, 
+                            FinalPrice = 0, 
+                            Items = new List<CartItemResponse>() 
+                        }, "Giỏ hàng đã được xóa vì không còn sản phẩm nào!");
                     }
 
                     await _unitOfWork.SaveChangesAsync();
@@ -334,6 +419,11 @@ namespace Services.Implementations
                     cart.PaymentMethod = dto.PaymentMethod;
                     cart.DeliveryMethod = dto.DeliveryMethod;
                     cart.DiscountCode = dto.DiscountCode;
+                    
+                    // Update delivery information
+                    cart.Address = dto.Address;
+                    cart.DeliveryTo = dto.DeliveryTo;
+                    cart.PhoneNumber = dto.PhoneNumber;
 
                     // đảm bảo tính lại giá trước khi chốt
                     cart.TotalPrice = cart.OrderDetails.Sum(i => i.Quantity * i.UnitPrice);

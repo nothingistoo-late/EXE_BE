@@ -91,5 +91,16 @@ namespace WebAPI.Controllers
             var result = await _orderService.CreatePayOSPaymentAsync(orderId);
             return result.IsSuccess ? Ok(result) : BadRequest(result);
         }
+
+        /// <summary>
+        /// Create weekly package - 2 orders with discounted price (250k instead of 300k)
+        /// Orders are delivered 3 days apart
+        /// </summary>
+        [HttpPost("weekly")]
+        public async Task<IActionResult> CreateWeeklyPackage([FromBody] CreateWeeklyPackageRequest request)
+        {
+            var result = await _orderService.CreateWeeklyPackageAsync(request);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
     }
 }

@@ -15,6 +15,8 @@ namespace DTOs.OrderDTOs.Request
         public DeliveryMethod DeliveryMethod { get; set; }
         public PaymentMethod PaymentMethod { get; set; }
         public string Address { get; set; } = null!;  // Địa chỉ giao hàng
+        public string DeliveryTo { get; set; } = null!;  // Tên người nhận
+        public string PhoneNumber { get; set; } = null!;  // Số điện thoại người nhận
     }
 
     public class CreateOrderDetailRequest
@@ -30,6 +32,8 @@ namespace DTOs.OrderDTOs.Request
         public PaymentMethod PaymentMethod { get; set; }
         public string? DiscountCode { get; set; }
         public string Address { get; set; } = null!;  // Địa chỉ giao hàng
+        public string DeliveryTo { get; set; } = null!;  // Tên người nhận
+        public string PhoneNumber { get; set; } = null!;  // Số điện thoại người nhận
         public List<CreateOrderDetailRequest> Items { get; set; } = new();
     }
 

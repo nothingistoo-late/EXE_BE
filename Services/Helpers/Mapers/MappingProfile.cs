@@ -115,6 +115,25 @@ namespace Services.Helpers.Mappers
             CreateMap<OrderDetail, OrderDetailResponse>()
                 .ForMember(dest => dest.BoxName, opt => opt.MapFrom(src => src.BoxType != null ? src.BoxType.Name : string.Empty));
 
+            // Map Order -> WeeklyOrderResponse (for weekly package orders)
+            CreateMap<Order, WeeklyOrderResponse>()
+                .ForMember(dest => dest.OrderId, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
+                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+                .ForMember(dest => dest.OrderDate, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.ScheduledDeliveryDate, opt => opt.MapFrom(src => src.ScheduledDeliveryDate ?? src.CreatedAt))
+                .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice))
+                .ForMember(dest => dest.FinalPrice, opt => opt.MapFrom(src => src.FinalPrice))
+                .ForMember(dest => dest.DiscountCode, opt => opt.MapFrom(src => src.DiscountCode))
+                .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Address))
+                .ForMember(dest => dest.DeliveryTo, opt => opt.MapFrom(src => src.DeliveryTo))
+                .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
+                .ForMember(dest => dest.PaymentMethod, opt => opt.MapFrom(src => src.PaymentMethod.ToString()))
+                .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => src.PaymentStatus.ToString()))
+                .ForMember(dest => dest.IsWeeklyPackage, opt => opt.MapFrom(src => src.IsWeeklyPackage))
+                .ForMember(dest => dest.WeeklyPackageId, opt => opt.MapFrom(src => src.WeeklyPackageId ?? Guid.Empty))
+                .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.OrderDetails));
+
             // Map từ CreateDTO -> Entity
             CreateMap<DiscountCreateDTO, Discount>().ReverseMap();
 

@@ -25,5 +25,10 @@ namespace Services.Interfaces
         Task<ApiResult<bool>> UpdateOrderStatusByOrderCodeAsync(string orderCode, OrderStatus status, object? paymentInfo = null);
         Task<ApiResult<PaymentLinkResponse>> CreatePayOSPaymentAsync(Guid orderId);
         Task<ApiResult<bool>> ProcessPayOSPaymentAsync(string paymentLinkId, string orderCode);
+        
+        /// <summary>
+        /// Tạo gói hàng tuần - 2 đơn hàng với giá ưu đãi 250k thay vì 300k
+        /// </summary>
+        Task<ApiResult<WeeklyPackageResponse>> CreateWeeklyPackageAsync(CreateWeeklyPackageRequest request);
     }
 }
