@@ -424,6 +424,10 @@ namespace Services.Implementations
                     cart.Address = dto.Address;
                     cart.DeliveryTo = dto.DeliveryTo;
                     cart.PhoneNumber = dto.PhoneNumber;
+                    
+                    // Update allergy and preference notes
+                    cart.AllergyNote = dto.AllergyNote;
+                    cart.PreferenceNote = dto.PreferenceNote;
 
                     // đảm bảo tính lại giá trước khi chốt
                     cart.TotalPrice = cart.OrderDetails.Sum(i => i.Quantity * i.UnitPrice);

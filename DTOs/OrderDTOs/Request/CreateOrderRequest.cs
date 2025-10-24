@@ -17,6 +17,10 @@ namespace DTOs.OrderDTOs.Request
         public string Address { get; set; } = null!;  // Địa chỉ giao hàng
         public string DeliveryTo { get; set; } = null!;  // Tên người nhận
         public string PhoneNumber { get; set; } = null!;  // Số điện thoại người nhận
+        
+        // Allergy and Preference Notes
+        public string? AllergyNote { get; set; }  // Ghi chú về dị ứng thực phẩm
+        public string? PreferenceNote { get; set; }  // Ghi chú về sở thích ăn uống
     }
 
     public class CreateOrderDetailRequest
@@ -34,6 +38,11 @@ namespace DTOs.OrderDTOs.Request
         public string Address { get; set; } = null!;  // Địa chỉ giao hàng
         public string DeliveryTo { get; set; } = null!;  // Tên người nhận
         public string PhoneNumber { get; set; } = null!;  // Số điện thoại người nhận
+        
+        // Allergy and Preference Notes
+        public string? AllergyNote { get; set; }  // Ghi chú về dị ứng thực phẩm
+        public string? PreferenceNote { get; set; }  // Ghi chú về sở thích ăn uống
+        
         public List<CreateOrderDetailRequest> Items { get; set; } = new();
     }
 

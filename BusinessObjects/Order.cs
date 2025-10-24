@@ -25,6 +25,10 @@ namespace BusinessObjects
         public string DeliveryTo { get; set; } = null!;  // Tên người nhận
         public string PhoneNumber { get; set; } = null!;  // Số điện thoại người nhận
         
+        // Allergy and Preference Notes
+        public string? AllergyNote { get; set; }  // Ghi chú về dị ứng thực phẩm
+        public string? PreferenceNote { get; set; }  // Ghi chú về sở thích ăn uống
+        
         // Weekly Package fields
         public bool IsWeeklyPackage { get; set; } = false;  // Đánh dấu đơn hàng thuộc gói hàng tuần
         public Guid? WeeklyPackageId { get; set; }  // ID nhóm các đơn hàng trong gói hàng tuần

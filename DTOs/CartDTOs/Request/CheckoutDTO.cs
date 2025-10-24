@@ -26,5 +26,12 @@ namespace DTOs.CartDTOs.Request
         [Required]
         [MaxLength(20)]
         public string PhoneNumber { get; set; } = null!;
+        
+        // Allergy and Preference Notes
+        [MaxLength(500)]
+        public string? AllergyNote { get; set; }  // Ghi chú về dị ứng thực phẩm
+        
+        [MaxLength(500)]
+        public string? PreferenceNote { get; set; }  // Ghi chú về sở thích ăn uống
     }
 }

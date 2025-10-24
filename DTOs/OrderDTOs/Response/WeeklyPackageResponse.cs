@@ -32,6 +32,11 @@ namespace DTOs.OrderDTOs.Respond
         public string Address { get; set; } = string.Empty;
         public string DeliveryTo { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
+        
+        // Allergy and Preference Notes
+        public string? AllergyNote { get; set; }  // Ghi chú về dị ứng thực phẩm
+        public string? PreferenceNote { get; set; }  // Ghi chú về sở thích ăn uống
+        
         public string PaymentMethod { get; set; } = string.Empty;
         public string PaymentStatus { get; set; } = string.Empty;
         public bool IsWeeklyPackage { get; set; } = true;

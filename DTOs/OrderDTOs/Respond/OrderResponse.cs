@@ -19,6 +19,11 @@ namespace DTOs.OrderDTOs.Respond
         public string Address { get; set; } = string.Empty;  // Địa chỉ giao hàng
         public string DeliveryTo { get; set; } = string.Empty;  // Tên người nhận
         public string PhoneNumber { get; set; } = string.Empty;  // Số điện thoại người nhận
+        
+        // Allergy and Preference Notes
+        public string? AllergyNote { get; set; }  // Ghi chú về dị ứng thực phẩm
+        public string? PreferenceNote { get; set; }  // Ghi chú về sở thích ăn uống
+        
         public string PaymentMethod { get; set; } = string.Empty;
         public string PaymentStatus { get; set; } = string.Empty;
         public string? PayOSPaymentUrl { get; set; }
