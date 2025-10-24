@@ -23,5 +23,7 @@ namespace Repositories.Interfaces
             Guid userId,
             List<string> vegetables,
             int count = 5);
+            
+        Task<AiRecipeResponse?> GetRecipeByDateAsync(DateTime date);
     }
 }

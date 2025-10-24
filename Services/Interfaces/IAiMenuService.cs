@@ -13,5 +13,11 @@ namespace Services.Interfaces
         Task<ApiResult<List<AiRecipeResponse>>> GetRecipesByVegetablesAsync(List<string> vegetables, int count = 5);
         Task<ApiResult<bool>> DeleteRecipeAsync(Guid recipeId);
         Task<ApiResult<int>> GetUserRecipeCountAsync();
+        
+        // Admin methods
+        Task<ApiResult<AdminGenerateRecipeResponse>> GenerateRecipeForDateAsync(AdminGenerateRecipeRequest request);
+        
+        // User methods
+        Task<ApiResult<UserRecipeResponse>> GetRecipeByDateAsync(DateTime date);
     }
 }

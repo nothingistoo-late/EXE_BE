@@ -374,5 +374,102 @@ Vui lòng chỉ phản hồi với JSON object, không có thêm văn bản ho�
             return recipe;
         }
 
+        public async Task<ApiResult<AdminGenerateRecipeResponse>> GenerateRecipeForDateAsync(AdminGenerateRecipeRequest request)
+        {
+            try
+            {
+                // Validate ingredients
+                if (!request.Ingredients.Any())
+                {
+                    return ApiResult<AdminGenerateRecipeResponse>.Failure(new ArgumentException("At least one ingredient is required"));
+                }
+
+                // Get current admin user ID
+                var currentUserId = _currentUserService.GetUserId();
+                if (currentUserId == null)
+                {
+                    return ApiResult<AdminGenerateRecipeResponse>.Failure(new UnauthorizedAccessException("Admin not authenticated"));
+                }
+
+                // Create a GenerateRecipeRequest from AdminGenerateRecipeRequest
+                var generateRequest = new GenerateRecipeRequest
+                {
+                    Vegetables = request.Ingredients,
+                    DietaryPreferences = request.DietaryPreferences,
+                    CookingSkillLevel = request.CookingSkillLevel
+                };
+
+                // Generate recipe using AI with current admin user ID
+                var aiRecipe = await GenerateRecipeWithAIAsync(generateRequest, currentUserId.Value);
+                if (aiRecipe == null)
+                {
+                    return ApiResult<AdminGenerateRecipeResponse>.Failure(new Exception("Failed to generate recipe"));
+                }
+
+                // Set the generated date to the requested date
+                aiRecipe.GeneratedAt = request.Date;
+
+                // Save recipe to database
+                var savedRecipe = await CreateAsync(aiRecipe);
+
+                // Map to response
+                var response = new AdminGenerateRecipeResponse
+                {
+                    Id = savedRecipe.Id,
+                    DishName = savedRecipe.DishName,
+                    Description = savedRecipe.Description,
+                    Ingredients = JsonConvert.DeserializeObject<List<string>>(savedRecipe.Ingredients) ?? new List<string>(),
+                    Instructions = JsonConvert.DeserializeObject<List<string>>(savedRecipe.Instructions) ?? new List<string>(),
+                    EstimatedCookingTime = savedRecipe.EstimatedCookingTime,
+                    CookingTips = savedRecipe.CookingTips,
+                    ImageUrl = savedRecipe.ImageUrl,
+                    Date = savedRecipe.GeneratedAt,
+                    CreatedAt = savedRecipe.CreatedAt
+                };
+
+                return ApiResult<AdminGenerateRecipeResponse>.Success(response, "Recipe generated successfully for the specified date");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating recipe for date {Date}", request.Date);
+                return ApiResult<AdminGenerateRecipeResponse>.Failure(ex);
+            }
+        }
+
+        public async Task<ApiResult<UserRecipeResponse>> GetRecipeByDateAsync(DateTime date)
+        {
+            try
+            {
+                var recipe = await _aiRecipeRepository.GetRecipeByDateAsync(date);
+                
+                if (recipe == null)
+                {
+                    return ApiResult<UserRecipeResponse>.Failure(new KeyNotFoundException("No recipe found for the specified date"));
+                }
+
+                // Map AiRecipeResponse to UserRecipeResponse
+                var response = new UserRecipeResponse
+                {
+                    Id = recipe.Id,
+                    DishName = recipe.DishName,
+                    Description = recipe.Description,
+                    Ingredients = recipe.Ingredients,
+                    Instructions = recipe.Instructions,
+                    EstimatedCookingTime = recipe.EstimatedCookingTime,
+                    CookingTips = recipe.CookingTips,
+                    ImageUrl = recipe.ImageUrl,
+                    Date = date,
+                    CreatedAt = recipe.CreatedAt // Use CreatedAt from BaseEntity
+                };
+
+                return ApiResult<UserRecipeResponse>.Success(response, "Recipe retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving recipe for date {Date}", date);
+                return ApiResult<UserRecipeResponse>.Failure(ex);
+            }
+        }
+
     }
 }

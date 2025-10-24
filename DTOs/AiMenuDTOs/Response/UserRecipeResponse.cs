@@ -1,6 +1,6 @@
 namespace DTOs.AiMenuDTOs.Response
 {
-    public class AiRecipeResponse
+    public class UserRecipeResponse
     {
         public Guid Id { get; set; }
         public string DishName { get; set; } = string.Empty;
@@ -10,6 +10,7 @@ namespace DTOs.AiMenuDTOs.Response
         public string EstimatedCookingTime { get; set; } = string.Empty;
         public string? CookingTips { get; set; }
         public string? ImageUrl { get; set; }
+        public DateTime Date { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 }

@@ -99,6 +99,21 @@ namespace Repositories.Implements
             return _mapper.Map<List<AiRecipeResponse>>(matchingRecipes);
         }
 
+        public async Task<AiRecipeResponse?> GetRecipeByDateAsync(DateTime date)
+        {
+            var startOfDay = date.Date;
+            var endOfDay = startOfDay.AddDays(1).AddTicks(-1);
+            
+            var recipe = await _context.AiRecipes
+                .Where(r => !r.IsDeleted && 
+                           r.GeneratedAt >= startOfDay && 
+                           r.GeneratedAt <= endOfDay)
+                .OrderByDescending(r => r.GeneratedAt)
+                .FirstOrDefaultAsync();
+
+            return recipe != null ? _mapper.Map<AiRecipeResponse>(recipe) : null;
+        }
+
         /// <summary>
         /// Helper method to combine two predicates using AND logic
         /// </summary>
