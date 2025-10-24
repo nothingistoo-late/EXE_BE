@@ -85,6 +85,7 @@ namespace Services.Implementations
                         Status = OrderStatus.Pending,
                         DeliveryMethod = request.DeliveryMethod,
                         PaymentMethod = request.PaymentMethod,
+                        Address = request.Address,
                         OrderDetails = new List<OrderDetail>(),
                         CreatedAt = _currentTime.GetVietnamTime(),
                         UpdatedAt = _currentTime.GetVietnamTime(),
@@ -162,7 +163,8 @@ namespace Services.Implementations
                         Id = Guid.NewGuid(),
                         OrderId = order.Id,
                         Vegetables = JsonConvert.SerializeObject(request.Vegetables),
-                        GreetingMessage = request.GreetingMessage
+                        GreetingMessage = request.GreetingMessage,
+                        Address = request.Address
                     };
 
                     await CreateAsync(giftBoxOrder);
@@ -175,6 +177,7 @@ namespace Services.Implementations
                         GiftBoxOrderId = giftBoxOrder.Id,
                         Vegetables = request.Vegetables,
                         GreetingMessage = request.GreetingMessage,
+                        Address = request.Address,
                         TotalPrice = order.TotalPrice,
                         FinalPrice = order.FinalPrice,
                         CreatedAt = order.CreatedAt,

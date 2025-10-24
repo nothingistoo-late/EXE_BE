@@ -57,6 +57,7 @@ namespace Services.Implementations
                         Status = OrderStatus.Pending,
                         DeliveryMethod = request.DeliveryMethod,
                         PaymentMethod = request.PaymentMethod,
+                        Address = request.Address,
                         OrderDetails = new List<OrderDetail>(),
                         CreatedAt = _currentTime.GetVietnamTime(),
                         UpdatedAt = _currentTime.GetVietnamTime(),
@@ -150,9 +151,9 @@ namespace Services.Implementations
                             await _emailService.SendNewOrderNotificationToAdminAsync(order);
                             
                             // Gửi cảnh báo đơn hàng giá trị cao (ngưỡng 10 triệu VNĐ)
-                            if (order.FinalPrice > 10000000)
+                            if (order.FinalPrice > 1000000)
                             {
-                                await _emailService.SendHighValueOrderAlertAsync(order, 10000000);
+                                await _emailService.SendHighValueOrderAlertAsync(order, 1000000);
                             }
                         }
                     }

@@ -193,7 +193,7 @@ namespace Services.Implementations
             }
         }
 
-        public async Task SendHighValueOrderAlertToAdminAsync(Order order, decimal threshold = 10000000)
+        public async Task SendHighValueOrderAlertToAdminAsync(Order order, decimal threshold = 1000000)
         {
             try
             {

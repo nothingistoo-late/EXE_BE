@@ -25,6 +25,10 @@ namespace DTOs.GiftBoxDTOs.Request
         
         [Required]
         public BusinessObjects.Common.PaymentMethod PaymentMethod { get; set; }
+        
+        [Required]
+        [MaxLength(1000)]
+        public string Address { get; set; } = string.Empty;  // Địa chỉ giao hàng
     }
 }
 

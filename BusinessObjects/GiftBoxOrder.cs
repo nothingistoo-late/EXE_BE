@@ -29,6 +29,10 @@ namespace BusinessObjects
         [MaxLength(1000)]
         public string LetterScription { get; set; } = string.Empty;
         
+        [Required]
+        [MaxLength(1000)]
+        public string Address { get; set; } = string.Empty;  // Địa chỉ giao hàng cho gift box
+        
         // Navigation properties
         public virtual Order Order { get; set; } = null!;
         public virtual Review? Review { get; set; }

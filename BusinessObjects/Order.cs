@@ -21,6 +21,7 @@ namespace BusinessObjects
         public double TotalPrice { get; set; }
         public double FinalPrice { get; set; }  // sau khi áp dụng giảm giá
         public string? DiscountCode { get; set; }
+        public string Address { get; set; } = null!;  // Địa chỉ giao hàng
         
         // PayOS fields
         public string? PayOSPaymentLinkId { get; set; }
