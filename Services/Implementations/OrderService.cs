@@ -22,15 +22,17 @@ namespace Services.Implementations
     {
         private readonly IMapper _mapper;
         private readonly IEXEGmailService _emailService;
+        private readonly IEmailAutomationService _emailAutomationService;
         private readonly IPendingOrderTrackingService _pendingOrderTrackingService;
         private readonly IPayOSService _payOSService;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<OrderService> _logger;
         
-        public OrderService(IMapper mapper, IGenericRepository<Order, Guid> repository, ICurrentUserService currentUserService, IUnitOfWork unitOfWork, ICurrentTime currentTime, IEXEGmailService emailService, IPendingOrderTrackingService pendingOrderTrackingService, IPayOSService payOSService, IHttpContextAccessor httpContextAccessor, ILogger<OrderService> logger) : base(repository, currentUserService, unitOfWork, currentTime)
+        public OrderService(IMapper mapper, IGenericRepository<Order, Guid> repository, ICurrentUserService currentUserService, IUnitOfWork unitOfWork, ICurrentTime currentTime, IEXEGmailService emailService, IEmailAutomationService emailAutomationService, IPendingOrderTrackingService pendingOrderTrackingService, IPayOSService payOSService, IHttpContextAccessor httpContextAccessor, ILogger<OrderService> logger) : base(repository, currentUserService, unitOfWork, currentTime)
         {
             _mapper = mapper;
             _emailService = emailService;
+            _emailAutomationService = emailAutomationService;
             _pendingOrderTrackingService = pendingOrderTrackingService;
             _payOSService = payOSService;
             _httpContextAccessor = httpContextAccessor;
@@ -798,35 +800,39 @@ namespace Services.Implementations
 
             await _unitOfWork.SaveChangesAsync();
 
-            // Gửi email thông báo (nếu cần)
+            // Gửi email automation theo trạng thái
             try
             {
                 var user = await _unitOfWork.UserRepository.GetByIdAsync(order.UserId);
-                if (user != null && !string.IsNullOrEmpty(user.Email))
+                if (user?.Email != null)
                 {
                     switch (status)
                     {
-                        case OrderStatus.Processing:
-                            await _emailService.SendOrderPreparationEmailAsync(user.Email, order);
-                            break;
                         case OrderStatus.Completed:
-                            await _emailService.SendPaymentSuccessEmailAsync(user.Email, order);
+                            await _emailAutomationService.SendPaymentSuccessEmailAsync(order, user.Email);
+                            _logger.LogInformation("Sent payment success email for order {OrderId}", order.Id);
+                            break;
+                        case OrderStatus.Processing:
+                            await _emailAutomationService.SendOrderPreparationEmailAsync(order, user.Email);
+                            _logger.LogInformation("Sent order preparation email for order {OrderId}", order.Id);
                             break;
                         case OrderStatus.Cancelled:
-                            await _emailService.SendOrderCancelledEmailAsync(user.Email, order, "Đơn hàng đã bị hủy");
+                            await _emailAutomationService.SendOrderCancelledEmailAsync(order, user.Email, "Đơn hàng bị hủy");
+                            _logger.LogInformation("Sent order cancelled email for order {OrderId}", order.Id);
                             break;
                     }
                 }
                 else
                 {
-                    _logger.LogWarning("Cannot send email for order {OrderId}: User not found or email is null", order.Id);
+                    _logger.LogWarning("User email not found for order {OrderId}, skipping email automation", order.Id);
                 }
             }
-            catch (Exception emailEx)
+            catch (Exception ex)
             {
-                // Log lỗi email nhưng không làm fail transaction
-                _logger.LogError(emailEx, "Error sending email for order {OrderId}", order.Id);
+                _logger.LogError(ex, "Failed to send email automation for order {OrderId} with status {Status}", order.Id, status);
+                // Không throw exception để không ảnh hưởng đến việc cập nhật trạng thái đơn hàng
             }
+
         }
 
         /// <summary>

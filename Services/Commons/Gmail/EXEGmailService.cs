@@ -36,10 +36,18 @@ namespace Services.Commons.Gmail
 
         public async Task SendOrderConfirmationEmailAsync(string toEmail, Order order)
         {
+            // Load order with details and box types
+            var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
+            if (orderWithDetails == null)
+            {
+                _logger.LogWarning("Order {OrderId} not found when sending confirmation email", order.Id);
+                return;
+            }
+
             var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
             var shortOrderId = MaskId(order.Id);
             var subject = $"Xác nhận đơn hàng - #{shortOrderId}";
-            var body = BuildOrderConfirmationEmailBody(order, userName, maskedUserId, shortOrderId, address);
+            var body = BuildOrderConfirmationEmailBody(orderWithDetails, userName, maskedUserId, shortOrderId, address);
             await _emailService.SendEmailAsync(toEmail, subject, body);
         }
 
@@ -51,19 +59,35 @@ namespace Services.Commons.Gmail
                 return;
             }
             
+            // Load order with details and box types
+            var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
+            if (orderWithDetails == null)
+            {
+                _logger.LogWarning("Order {OrderId} not found when sending payment success email", order.Id);
+                return;
+            }
+            
             var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
             var shortOrderId = MaskId(order.Id);
             var subject = $"Thanh toán thành công - #{shortOrderId}";
-            var body = BuildPaymentSuccessEmailBody(order, userName, maskedUserId, shortOrderId, address);
+            var body = BuildPaymentSuccessEmailBody(orderWithDetails, userName, maskedUserId, shortOrderId, address);
             await _emailService.SendEmailAsync(toEmail, subject, body);
         }
 
         public async Task SendNewOrderNotificationToAdminAsync(Order order)
         {
+            // Load order with details and box types
+            var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
+            if (orderWithDetails == null)
+            {
+                _logger.LogWarning("Order {OrderId} not found when sending admin notification", order.Id);
+                return;
+            }
+
             var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
             var shortOrderId = MaskId(order.Id);
             var subject = $"Đơn hàng mới - #{shortOrderId}";
-            var body = BuildNewOrderNotificationBody(order, userName, maskedUserId, phone, address, shortOrderId);
+            var body = BuildNewOrderNotificationBody(orderWithDetails, userName, maskedUserId, phone, address, shortOrderId);
             await _emailService.SendEmailAsync(_emailSettings.AdminEmail, subject, body);
         }
 
@@ -76,37 +100,69 @@ namespace Services.Commons.Gmail
 
         public async Task SendOrderPreparationEmailAsync(string toEmail, Order order)
         {
+            // Load order with details and box types
+            var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
+            if (orderWithDetails == null)
+            {
+                _logger.LogWarning("Order {OrderId} not found when sending preparation email", order.Id);
+                return;
+            }
+
             var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
             var shortOrderId = MaskId(order.Id);
             var subject = $"Đơn hàng đang chuẩn bị - #{shortOrderId}";
-            var body = BuildOrderPreparationEmailBody(order, userName, maskedUserId, shortOrderId, address);
+            var body = BuildOrderPreparationEmailBody(orderWithDetails, userName, maskedUserId, shortOrderId, address);
             await _emailService.SendEmailAsync(toEmail, subject, body);
         }
 
         public async Task SendOrderDeliveredEmailAsync(string toEmail, Order order)
         {
+            // Load order with details and box types
+            var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
+            if (orderWithDetails == null)
+            {
+                _logger.LogWarning("Order {OrderId} not found when sending delivered email", order.Id);
+                return;
+            }
+
             var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
             var shortOrderId = MaskId(order.Id);
             var subject = $"Giao hàng thành công - #{shortOrderId}";
-            var body = BuildOrderDeliveredEmailBody(order, userName, maskedUserId, shortOrderId, address);
+            var body = BuildOrderDeliveredEmailBody(orderWithDetails, userName, maskedUserId, shortOrderId, address);
             await _emailService.SendEmailAsync(toEmail, subject, body);
         }
 
         public async Task SendOrderCancelledEmailAsync(string toEmail, Order order, string reason)
         {
+            // Load order with details and box types
+            var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
+            if (orderWithDetails == null)
+            {
+                _logger.LogWarning("Order {OrderId} not found when sending cancelled email", order.Id);
+                return;
+            }
+
             var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
             var shortOrderId = MaskId(order.Id);
             var subject = $"Đơn hàng đã hủy - #{shortOrderId}";
-            var body = BuildOrderCancelledEmailBody(order, reason, userName, maskedUserId, shortOrderId, address);
+            var body = BuildOrderCancelledEmailBody(orderWithDetails, reason, userName, maskedUserId, shortOrderId, address);
             await _emailService.SendEmailAsync(toEmail, subject, body);
         }
 
         public async Task SendRefundProcessedEmailAsync(string toEmail, Order order, decimal refundAmount)
         {
+            // Load order with details and box types
+            var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
+            if (orderWithDetails == null)
+            {
+                _logger.LogWarning("Order {OrderId} not found when sending refund email", order.Id);
+                return;
+            }
+
             var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
             var shortOrderId = MaskId(order.Id);
             var subject = $"Hoàn tiền thành công - #{shortOrderId}";
-            var body = BuildRefundProcessedEmailBody(order, refundAmount, userName, maskedUserId, shortOrderId, address);
+            var body = BuildRefundProcessedEmailBody(orderWithDetails, refundAmount, userName, maskedUserId, shortOrderId, address);
             await _emailService.SendEmailAsync(toEmail, subject, body);
         }
 
@@ -162,55 +218,103 @@ namespace Services.Commons.Gmail
 
         public async Task SendHighValueOrderAlertAsync(Order order, decimal threshold)
         {
+            // Load order with details and box types
+            var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
+            if (orderWithDetails == null)
+            {
+                _logger.LogWarning("Order {OrderId} not found when sending high value alert", order.Id);
+                return;
+            }
+
             var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
             var shortOrderId = MaskId(order.Id);
             var subject = $"🚨 Đơn hàng giá trị cao - #{shortOrderId}";
-            var body = BuildHighValueOrderAlertBody(order, threshold, userName, maskedUserId, phone, address, shortOrderId);
+            var body = BuildHighValueOrderAlertBody(orderWithDetails, threshold, userName, maskedUserId, phone, address, shortOrderId);
             await _emailService.SendEmailAsync(_emailSettings.AdminEmail, subject, body);
         }
 
         public async Task SendOrderCancelledAlertAsync(Order order, string reason)
         {
+            // Load order with details and box types
+            var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
+            if (orderWithDetails == null)
+            {
+                _logger.LogWarning("Order {OrderId} not found when sending cancelled alert", order.Id);
+                return;
+            }
+
             var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
             var shortOrderId = MaskId(order.Id);
             var subject = $"⚠️ Đơn hàng bị hủy - #{shortOrderId}";
-            var body = BuildOrderCancelledAlertBody(order, reason, userName, maskedUserId, phone, address, shortOrderId);
+            var body = BuildOrderCancelledAlertBody(orderWithDetails, reason, userName, maskedUserId, phone, address, shortOrderId);
             await _emailService.SendEmailAsync(_emailSettings.AdminEmail, subject, body);
         }
 
         public async Task SendPendingOrderAlertAsync(Order order, TimeSpan pendingTime)
         {
+            // Load order with details and box types
+            var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
+            if (orderWithDetails == null)
+            {
+                _logger.LogWarning("Order {OrderId} not found when sending pending alert", order.Id);
+                return;
+            }
+
             var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
             var shortOrderId = MaskId(order.Id);
             var subject = $"⏰ Đơn hàng chờ xác nhận - #{shortOrderId}";
-            var body = BuildPendingOrderAlertBody(order, pendingTime, userName, maskedUserId, phone, address, shortOrderId);
+            var body = BuildPendingOrderAlertBody(orderWithDetails, pendingTime, userName, maskedUserId, phone, address, shortOrderId);
             await _emailService.SendEmailAsync(_emailSettings.AdminEmail, subject, body);
         }
 
         public async Task SendPaymentFailedAlertAsync(Order order, int failureCount)
         {
+            // Load order with details and box types
+            var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
+            if (orderWithDetails == null)
+            {
+                _logger.LogWarning("Order {OrderId} not found when sending payment failed alert", order.Id);
+                return;
+            }
+
             var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
             var shortOrderId = MaskId(order.Id);
             var subject = $"💳 Thanh toán thất bại nhiều lần - #{shortOrderId}";
-            var body = BuildPaymentFailedAlertBody(order, failureCount, userName, maskedUserId, phone, address, shortOrderId);
+            var body = BuildPaymentFailedAlertBody(orderWithDetails, failureCount, userName, maskedUserId, phone, address, shortOrderId);
             await _emailService.SendEmailAsync(_emailSettings.AdminEmail, subject, body);
         }
 
         public async Task SendRefundRequestAlertAsync(Order order, string reason)
         {
+            // Load order with details and box types
+            var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
+            if (orderWithDetails == null)
+            {
+                _logger.LogWarning("Order {OrderId} not found when sending refund request alert", order.Id);
+                return;
+            }
+
             var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
             var shortOrderId = MaskId(order.Id);
             var subject = $"💰 Yêu cầu hoàn tiền - #{shortOrderId}";
-            var body = BuildRefundRequestAlertBody(order, reason, userName, maskedUserId, phone, address, shortOrderId);
+            var body = BuildRefundRequestAlertBody(orderWithDetails, reason, userName, maskedUserId, phone, address, shortOrderId);
             await _emailService.SendEmailAsync(_emailSettings.AdminEmail, subject, body);
         }
 
         public async Task SendDeliveryIssueAlertAsync(Order order, string issue)
         {
+            // Load order with details and box types
+            var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
+            if (orderWithDetails == null)
+            {
+                _logger.LogWarning("Order {OrderId} not found when sending delivery issue alert", order.Id);
+                return;
+            }
+
             var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
             var shortOrderId = MaskId(order.Id);
             var subject = $"🚚 Sự cố giao hàng - #{shortOrderId}";
-            var body = BuildDeliveryIssueAlertBody(order, issue, userName, maskedUserId, phone, address, shortOrderId);
+            var body = BuildDeliveryIssueAlertBody(orderWithDetails, issue, userName, maskedUserId, phone, address, shortOrderId);
             await _emailService.SendEmailAsync(_emailSettings.AdminEmail, subject, body);
         }
 
