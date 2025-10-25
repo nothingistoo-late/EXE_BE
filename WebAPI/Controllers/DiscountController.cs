@@ -64,4 +64,12 @@ public class DiscountsController : ControllerBase
         var result = await _discountService.DeleteDiscountAsync(id);
         return result.IsSuccess ? Ok(result) : NotFound(result);
     }
+
+    // GET: api/discounts/validate/{code}
+    [HttpGet("validate/{code}")]
+    public async Task<IActionResult> ValidateCode(string code)
+    {
+        var result = await _discountService.ValidateDiscountCodeAsync(code);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
 }

@@ -15,5 +15,6 @@ namespace Services.Interfaces
         Task<ApiResult<DiscountRespondDTO>> CreateDiscountAsync(DiscountCreateDTO dto);
         Task<ApiResult<DiscountRespondDTO>> UpdateDiscountAsync(Guid id, DiscountUpdateDTO dto);
         Task<ApiResult<bool>> DeleteDiscountAsync(Guid id);
+        Task<ApiResult<DiscountRespondDTO>> ValidateDiscountCodeAsync(string code);
     }
 }

@@ -16,6 +16,7 @@ namespace Repositories.Implements
 
         public async Task<Discount?> GetActiveDiscountByCodeAsync(string code)
         {
+            var currentTime = DateTime.UtcNow.AddHours(7); // Vietnam time
             return await _context.Discounts
                 .FirstOrDefaultAsync(d => d.Code == code && d.IsActive && !d.IsDeleted);
         }

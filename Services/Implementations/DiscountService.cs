@@ -156,5 +156,69 @@ namespace Services.Implementations
                 return ApiResult<bool>.Failure(new Exception("Lỗi khi xoá mã giảm giá: " + ex.Message));
             }
         }
+
+        // ✅ Validate Discount Code - Kiểm tra mã giảm giá có hợp lệ không
+        public async Task<ApiResult<DiscountRespondDTO>> ValidateDiscountCodeAsync(string code)
+        {
+            try
+            {
+                // Kiểm tra code có rỗng không
+                if (string.IsNullOrWhiteSpace(code))
+                {
+                    return ApiResult<DiscountRespondDTO>.Failure(
+                        new Exception("Mã giảm giá không được để trống!"));
+                }
+
+                // Lấy discount từ database
+                var discount = await _unitOfWork.DiscountRepository.GetActiveDiscountByCodeAsync(code);
+                
+                // Không tìm thấy
+                if (discount == null)
+                {
+                    return ApiResult<DiscountRespondDTO>.Failure(
+                        new Exception("Mã giảm giá không tồn tại!"));
+                }
+
+                // Kiểm tra có bị xóa không
+                if (discount.IsDeleted)
+                {
+                    return ApiResult<DiscountRespondDTO>.Failure(
+                        new Exception("Mã giảm giá đã bị xóa!"));
+                }
+
+                // Kiểm tra có active không
+                if (!discount.IsActive)
+                {
+                    return ApiResult<DiscountRespondDTO>.Failure(
+                        new Exception("Mã giảm giá đã bị vô hiệu hóa!"));
+                }
+
+                var currentTime = _currentTime.GetVietnamTime();
+
+                // Kiểm tra chưa đến ngày bắt đầu
+                if (discount.StartDate > currentTime)
+                {
+                    return ApiResult<DiscountRespondDTO>.Failure(
+                        new Exception($"Mã giảm giá chưa có hiệu lực! Thời gian bắt đầu: {discount.StartDate:dd/MM/yyyy HH:mm}"));
+                }
+
+                // Kiểm tra đã hết hạn chưa
+                if (discount.EndDate < currentTime)
+                {
+                    return ApiResult<DiscountRespondDTO>.Failure(
+                        new Exception($"Mã giảm giá đã hết hạn! Thời gian kết thúc: {discount.EndDate:dd/MM/yyyy HH:mm}"));
+                }
+
+                // Mã giảm giá hợp lệ
+                var dto = _mapper.Map<DiscountRespondDTO>(discount);
+                return ApiResult<DiscountRespondDTO>.Success(dto, 
+                    $"Mã giảm giá hợp lệ! Giảm giá {discount.DiscountValue}{(discount.IsPercentage ? "%" : " VNĐ")}");
+            }
+            catch (Exception ex)
+            {
+                return ApiResult<DiscountRespondDTO>.Failure(
+                    new Exception("Lỗi khi kiểm tra mã giảm giá: " + ex.Message));
+            }
+        }
     }
 }
