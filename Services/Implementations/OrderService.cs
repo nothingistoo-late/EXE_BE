@@ -264,6 +264,76 @@ namespace Services.Implementations
             }
         }
 
+        public async Task<ApiResult<OrderResponseWithGiftBox>> GetOrderWithGiftBoxByIdAsync(Guid id)
+        {
+            try
+            {
+                var order = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(id);
+
+                if (order == null)
+                    return ApiResult<OrderResponseWithGiftBox>.Failure(new Exception("Không tìm thấy đơn hàng với id : "+ id));
+
+                // Get GiftBox information for each order detail
+                var detailsWithGiftBox = new List<OrderDetailWithGiftBoxResponse>();
+                
+                foreach (var orderDetail in order.OrderDetails)
+                {
+                    var detail = new OrderDetailWithGiftBoxResponse
+                    {
+                        BoxTypeId = orderDetail.BoxTypeId,
+                        BoxName = orderDetail.BoxType?.Name ?? string.Empty,
+                        Quantity = orderDetail.Quantity,
+                        UnitPrice = orderDetail.UnitPrice
+                    };
+
+                    // Check if this is a GiftBox item
+                    if (orderDetail.BoxType?.Name == "Gift Box")
+                    {
+                        var giftBoxOrder = await _unitOfWork.GiftBoxOrderRepository
+                            .FirstOrDefaultAsync(g => g.OrderId == order.Id);
+                        
+                        if (giftBoxOrder != null)
+                        {
+                            detail.GiftBoxOrderId = giftBoxOrder.Id;
+                            detail.Vegetables = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(giftBoxOrder.Vegetables) ?? new List<string>();
+                            detail.GreetingMessage = giftBoxOrder.GreetingMessage;
+                            detail.BoxDescription = giftBoxOrder.BoxDescription;
+                            detail.LetterScription = giftBoxOrder.LetterScription;
+                        }
+                    }
+
+                    detailsWithGiftBox.Add(detail);
+                }
+
+                var response = new OrderResponseWithGiftBox
+                {
+                    Id = order.Id,
+                    UserId = order.UserId,
+                    Status = order.Status.ToString(),
+                    OrderDate = order.CreatedAt,
+                    TotalPrice = order.TotalPrice,
+                    FinalPrice = order.FinalPrice,
+                    DiscountCode = order.DiscountCode,
+                    Address = order.Address,
+                    DeliveryTo = order.DeliveryTo,
+                    PhoneNumber = order.PhoneNumber,
+                    AllergyNote = order.AllergyNote,
+                    PreferenceNote = order.PreferenceNote,
+                    PaymentMethod = order.PaymentMethod.ToString(),
+                    PaymentStatus = order.IsPaid ? "Paid" : "Pending",
+                    PayOSPaymentUrl = order.PayOSPaymentUrl,
+                    PayOSOrderCode = order.PayOSOrderCode,
+                    Details = detailsWithGiftBox
+                };
+
+                return ApiResult<OrderResponseWithGiftBox>.Success(response, "Lấy đơn hàng với thông tin GiftBox thành công!!!");
+            }
+            catch (Exception ex)
+            {
+                return ApiResult<OrderResponseWithGiftBox>.Failure(ex);
+            }
+        }
+
         public async Task<ApiResult<List<OrderResponse>>> GetAllOrdersByCustomerIDAsync(Guid customerId)
         {
             try
@@ -1024,6 +1094,186 @@ namespace Services.Implementations
             catch (Exception ex)
             {
                 return ApiResult<OrderResponse>.Failure(ex);
+            }
+        }
+
+        public async Task<ApiResult<List<OrderResponseWithGiftBox>>> GetOrdersWithGiftBoxByUserIdAsync(Guid userId)
+        {
+            try
+            {
+                var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+                if (user == null)
+                    return ApiResult<List<OrderResponseWithGiftBox>>.Failure(new Exception("Không tìm thấy user này : " + userId));
+
+                var orders = await _unitOfWork.OrderRepository.GetAllOrdersByCustomerIdAsync(userId);
+
+                if (orders == null)
+                    return ApiResult<List<OrderResponseWithGiftBox>>.Failure(new Exception("Không tìm thấy đơn hàng nào cho user này : " + userId));
+
+                // loại bỏ đơn hàng có trạng thái Cart
+                orders = orders.Where(o => o.Status != OrderStatus.Cart).ToList();
+
+                if (orders.Count == 0)
+                    return ApiResult<List<OrderResponseWithGiftBox>>.Failure(new Exception("Không tìm thấy đơn hàng nào cho user này : " + userId));
+
+                // Get all BoxType information
+                var allBoxTypeIds = orders.SelectMany(o => o.OrderDetails.Select(od => od.BoxTypeId)).Distinct().ToList();
+                var boxTypes = await _unitOfWork.BoxTypeRepository.GetByIdsAsync(allBoxTypeIds);
+                var boxTypeMap = boxTypes.ToDictionary(b => b.Id, b => b.Name);
+
+                var ordersWithGiftBox = new List<OrderResponseWithGiftBox>();
+
+                foreach (var order in orders)
+                {
+                    // Get GiftBox information for each order detail
+                    var detailsWithGiftBox = new List<OrderDetailWithGiftBoxResponse>();
+                    
+                    foreach (var orderDetail in order.OrderDetails)
+                    {
+                        var boxTypeName = boxTypeMap.TryGetValue(orderDetail.BoxTypeId, out var name) ? name : string.Empty;
+                        
+                        var detail = new OrderDetailWithGiftBoxResponse
+                        {
+                            BoxTypeId = orderDetail.BoxTypeId,
+                            BoxName = boxTypeName,
+                            Quantity = orderDetail.Quantity,
+                            UnitPrice = orderDetail.UnitPrice
+                        };
+
+                        // Check if this is a GiftBox item
+                        if (boxTypeName == "Gift Box")
+                        {
+                            var giftBoxOrder = await _unitOfWork.GiftBoxOrderRepository
+                                .FirstOrDefaultAsync(g => g.OrderId == order.Id);
+                            
+                            if (giftBoxOrder != null)
+                            {
+                                detail.GiftBoxOrderId = giftBoxOrder.Id;
+                                detail.Vegetables = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(giftBoxOrder.Vegetables) ?? new List<string>();
+                                detail.GreetingMessage = giftBoxOrder.GreetingMessage;
+                                detail.BoxDescription = giftBoxOrder.BoxDescription;
+                                detail.LetterScription = giftBoxOrder.LetterScription;
+                            }
+                        }
+
+                        detailsWithGiftBox.Add(detail);
+                    }
+
+                    var orderWithGiftBox = new OrderResponseWithGiftBox
+                    {
+                        Id = order.Id,
+                        UserId = order.UserId,
+                        Status = order.Status.ToString(),
+                        OrderDate = order.CreatedAt,
+                        TotalPrice = order.TotalPrice,
+                        FinalPrice = order.FinalPrice,
+                        DiscountCode = order.DiscountCode,
+                        Address = order.Address,
+                        DeliveryTo = order.DeliveryTo,
+                        PhoneNumber = order.PhoneNumber,
+                        AllergyNote = order.AllergyNote,
+                        PreferenceNote = order.PreferenceNote,
+                        PaymentMethod = order.PaymentMethod.ToString(),
+                        PaymentStatus = order.IsPaid ? "Paid" : "Pending",
+                        PayOSPaymentUrl = order.PayOSPaymentUrl,
+                        PayOSOrderCode = order.PayOSOrderCode,
+                        Details = detailsWithGiftBox
+                    };
+
+                    ordersWithGiftBox.Add(orderWithGiftBox);
+                }
+
+                return ApiResult<List<OrderResponseWithGiftBox>>.Success(ordersWithGiftBox, "Lấy danh sách đơn hàng với thông tin GiftBox thành công!!!");
+            }
+            catch (Exception ex)
+            {
+                return ApiResult<List<OrderResponseWithGiftBox>>.Failure(ex);
+            }
+        }
+
+        public async Task<ApiResult<List<OrderResponseWithGiftBox>>> GetAllOrdersWithGiftBoxForAdminAsync()
+        {
+            try
+            {
+                var orders = await _unitOfWork.OrderRepository.GetAllAsync(
+                    predicate: o => o.Status != OrderStatus.Cart,
+                    includes: o => o.OrderDetails);
+
+                if (orders == null || orders.Count == 0)
+                    return ApiResult<List<OrderResponseWithGiftBox>>.Failure(new Exception("Không tìm thấy đơn hàng nào"));
+
+                // Get all BoxType information
+                var allBoxTypeIds = orders.SelectMany(o => o.OrderDetails.Select(od => od.BoxTypeId)).Distinct().ToList();
+                var boxTypes = await _unitOfWork.BoxTypeRepository.GetByIdsAsync(allBoxTypeIds);
+                var boxTypeMap = boxTypes.ToDictionary(b => b.Id, b => b.Name);
+
+                var ordersWithGiftBox = new List<OrderResponseWithGiftBox>();
+
+                foreach (var order in orders)
+                {
+                    // Get GiftBox information for each order detail
+                    var detailsWithGiftBox = new List<OrderDetailWithGiftBoxResponse>();
+                    
+                    foreach (var orderDetail in order.OrderDetails)
+                    {
+                        var boxTypeName = boxTypeMap.TryGetValue(orderDetail.BoxTypeId, out var name) ? name : string.Empty;
+                        
+                        var detail = new OrderDetailWithGiftBoxResponse
+                        {
+                            BoxTypeId = orderDetail.BoxTypeId,
+                            BoxName = boxTypeName,
+                            Quantity = orderDetail.Quantity,
+                            UnitPrice = orderDetail.UnitPrice
+                        };
+
+                        // Check if this is a GiftBox item
+                        if (boxTypeName == "Gift Box")
+                        {
+                            var giftBoxOrder = await _unitOfWork.GiftBoxOrderRepository
+                                .FirstOrDefaultAsync(g => g.OrderId == order.Id);
+                            
+                            if (giftBoxOrder != null)
+                            {
+                                detail.GiftBoxOrderId = giftBoxOrder.Id;
+                                detail.Vegetables = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(giftBoxOrder.Vegetables) ?? new List<string>();
+                                detail.GreetingMessage = giftBoxOrder.GreetingMessage;
+                                detail.BoxDescription = giftBoxOrder.BoxDescription;
+                                detail.LetterScription = giftBoxOrder.LetterScription;
+                            }
+                        }
+
+                        detailsWithGiftBox.Add(detail);
+                    }
+
+                    var orderWithGiftBox = new OrderResponseWithGiftBox
+                    {
+                        Id = order.Id,
+                        UserId = order.UserId,
+                        Status = order.Status.ToString(),
+                        OrderDate = order.CreatedAt,
+                        TotalPrice = order.TotalPrice,
+                        FinalPrice = order.FinalPrice,
+                        DiscountCode = order.DiscountCode,
+                        Address = order.Address,
+                        DeliveryTo = order.DeliveryTo,
+                        PhoneNumber = order.PhoneNumber,
+                        AllergyNote = order.AllergyNote,
+                        PreferenceNote = order.PreferenceNote,
+                        PaymentMethod = order.PaymentMethod.ToString(),
+                        PaymentStatus = order.IsPaid ? "Paid" : "Pending",
+                        PayOSPaymentUrl = order.PayOSPaymentUrl,
+                        PayOSOrderCode = order.PayOSOrderCode,
+                        Details = detailsWithGiftBox
+                    };
+
+                    ordersWithGiftBox.Add(orderWithGiftBox);
+                }
+
+                return ApiResult<List<OrderResponseWithGiftBox>>.Success(ordersWithGiftBox, "Lấy tất cả đơn hàng với thông tin GiftBox cho admin thành công!!!");
+            }
+            catch (Exception ex)
+            {
+                return ApiResult<List<OrderResponseWithGiftBox>>.Failure(ex);
             }
         }
     }

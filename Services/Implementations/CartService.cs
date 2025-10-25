@@ -98,34 +98,52 @@ namespace Services.Implementations
                     return ApiResult<CartResponseWithGiftBox>.Failure(new Exception("Giỏ hàng của bạn đang trống!!"));
                 }
 
+                // Get BoxType information for all items
+                var boxTypeIds = cart.OrderDetails.Select(od => od.BoxTypeId).Distinct().ToList();
+                var boxTypes = await _unitOfWork.BoxTypeRepository.GetByIdsAsync(boxTypeIds);
+                var boxTypeMap = boxTypes.ToDictionary(b => b.Id, b => b.Name);
+
                 // Get GiftBox information for each item
                 var itemsWithGiftBox = new List<CartItemWithGiftBoxResponse>();
                 
                 foreach (var orderDetail in cart.OrderDetails)
                 {
+                    var boxTypeName = boxTypeMap.TryGetValue(orderDetail.BoxTypeId, out var name) ? name : string.Empty;
+                    
                     var item = new CartItemWithGiftBoxResponse
                     {
                         Id = orderDetail.Id,
                         BoxTypeId = orderDetail.BoxTypeId,
-                        BoxTypeName = orderDetail.BoxType?.Name ?? string.Empty,
+                        BoxTypeName = boxTypeName,
                         Quantity = orderDetail.Quantity,
                         UnitPrice = orderDetail.UnitPrice
                     };
 
                     // Check if this is a GiftBox item
-                    if (orderDetail.BoxType?.Name == "Gift Box")
+                    if (boxTypeName == "Gift Box")
                     {
+                        _logger.LogInformation("🔍 Found GiftBox item, searching for GiftBoxOrder for cart {CartId}", cart.Id);
+                        
                         var giftBoxOrder = await _unitOfWork.GiftBoxOrderRepository
                             .FirstOrDefaultAsync(g => g.OrderId == cart.Id);
                         
                         if (giftBoxOrder != null)
                         {
+                            _logger.LogInformation("✅ Found GiftBoxOrder {GiftBoxOrderId} for cart {CartId}", giftBoxOrder.Id, cart.Id);
                             item.GiftBoxOrderId = giftBoxOrder.Id;
                             item.Vegetables = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(giftBoxOrder.Vegetables) ?? new List<string>();
                             item.GreetingMessage = giftBoxOrder.GreetingMessage;
                             item.BoxDescription = giftBoxOrder.BoxDescription;
                             item.LetterScription = giftBoxOrder.LetterScription;
                         }
+                        else
+                        {
+                            _logger.LogWarning("❌ No GiftBoxOrder found for cart {CartId}", cart.Id);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogInformation("📦 Item {BoxTypeName} is not a GiftBox", boxTypeName);
                     }
 
                     itemsWithGiftBox.Add(item);

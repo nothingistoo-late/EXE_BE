@@ -15,6 +15,9 @@ namespace Services.Interfaces
     {
         Task<ApiResult<OrderResponse>> CreateOrderAsync(CreateOrderRequest request);
         Task<ApiResult<OrderResponse>> GetOrderByIdAsync(Guid id);
+        Task<ApiResult<OrderResponseWithGiftBox>> GetOrderWithGiftBoxByIdAsync(Guid id);
+        Task<ApiResult<List<OrderResponseWithGiftBox>>> GetOrdersWithGiftBoxByUserIdAsync(Guid userId);
+        Task<ApiResult<List<OrderResponseWithGiftBox>>> GetAllOrdersWithGiftBoxForAdminAsync();
         Task<ApiResult<OrderResponse>> GetOrderByIdForDebugAsync(Guid orderId);
         Task<ApiResult<OrderResponse>> FindOrderByPayOSOrderCodeAsync(string orderCode);
         Task<ApiResult<bool>> VerifyOrderPaymentFlowAsync(Guid orderId);

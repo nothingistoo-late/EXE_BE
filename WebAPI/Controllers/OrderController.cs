@@ -40,6 +40,16 @@ namespace WebAPI.Controllers
         }
 
         /// <summary>
+        /// Get order by ID with GiftBox information
+        /// </summary>
+        [HttpGet("{id:guid}/with-giftbox")]
+        public async Task<IActionResult> GetOrderWithGiftBoxById(Guid id)
+        {
+            var result = await _orderService.GetOrderWithGiftBoxByIdAsync(id);
+            return result.IsSuccess ? Ok(result) : NotFound(result);
+        }
+
+        /// <summary>
         /// Get all orders
         /// </summary>
         [HttpGet]
@@ -59,6 +69,27 @@ namespace WebAPI.Controllers
         {
             var result = await _orderService.GetAllOrdersByCustomerIDAsync(customerId);
             return result.IsSuccess ? Ok(result) : NotFound(result);
+        }
+
+        /// <summary>
+        /// Get all orders with GiftBox info by user id
+        /// </summary>
+        [HttpGet("user/{userId:guid}/with-giftbox")]
+        public async Task<IActionResult> GetOrdersWithGiftBoxByUserId(Guid userId)
+        {
+            var result = await _orderService.GetOrdersWithGiftBoxByUserIdAsync(userId);
+            return result.IsSuccess ? Ok(result) : NotFound(result);
+        }
+
+        /// <summary>
+        /// Get all orders with GiftBox info for admin management
+        /// </summary>
+        [HttpGet("admin/with-giftbox")]
+        [Authorize(Roles = "ADMIN")]
+        public async Task<IActionResult> GetAllOrdersWithGiftBoxForAdmin()
+        {
+            var result = await _orderService.GetAllOrdersWithGiftBoxForAdminAsync();
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
         }
 
         /// <summary>
