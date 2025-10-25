@@ -40,7 +40,7 @@ namespace Services.Helpers.Mapers
             if (new EmailAddressAttribute().IsValid(req.Email)) user.Email = req.Email;
             if (!string.IsNullOrEmpty(req.PhoneNumbers)) user.PhoneNumber = req.PhoneNumbers;
             user.Gender = req.Gender;
-            user.UpdatedAt = DateTime.UtcNow;
+            user.UpdatedAt = DateTime.UtcNow.AddHours(7);
         }
 
         // Domain to Response mappings

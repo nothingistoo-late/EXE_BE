@@ -59,7 +59,7 @@ namespace Services.Helpers
                 return false;
 
             // Kiểm tra token có expired không
-            if (storedTokenInfo.Expiry <= DateTime.UtcNow)
+            if (storedTokenInfo.Expiry <= DateTime.UtcNow.AddHours(7))
                 return false;
 
             return true;

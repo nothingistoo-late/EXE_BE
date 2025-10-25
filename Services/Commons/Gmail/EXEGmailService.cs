@@ -735,7 +735,7 @@ namespace Services.Commons.Gmail
             
             <h3>Thông tin giao hàng:</h3>
             <p><strong>Mã đơn hàng:</strong> #{shortOrderId}</p>
-            <p><strong>Ngày giao hàng:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}</p>
+            <p><strong>Ngày giao hàng:</strong> {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}</p>
             <p><strong>Trạng thái:</strong> Đã giao hàng</p>
             
             <h3>Sản phẩm đã giao:</h3>
@@ -845,7 +845,7 @@ namespace Services.Commons.Gmail
             
             <h3>Thông tin hoàn tiền:</h3>
             <p><strong>Mã đơn hàng:</strong> #{shortOrderId}</p>
-            <p><strong>Ngày hoàn tiền:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}</p>
+            <p><strong>Ngày hoàn tiền:</strong> {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}</p>
             <p><strong>Phương thức thanh toán gốc:</strong> {order.PaymentMethod}</p>
             
             <div class='amount-box'>
@@ -992,7 +992,7 @@ namespace Services.Commons.Gmail
             <p>Chúng tôi xác nhận rằng mật khẩu tài khoản của bạn đã được thay đổi thành công.</p>
             
             <h3>Thông tin thay đổi:</h3>
-            <p><strong>Thời gian:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}</p>
+            <p><strong>Thời gian:</strong> {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}</p>
             <p><strong>Trạng thái:</strong> Thành công</p>
             
             <div class='security-info'>
@@ -1049,7 +1049,7 @@ namespace Services.Commons.Gmail
             <p>Chúng tôi xác nhận rằng thông tin tài khoản của bạn đã được cập nhật thành công.</p>
             
             <h3>Thông tin cập nhật:</h3>
-            <p><strong>Thời gian:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}</p>
+            <p><strong>Thời gian:</strong> {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}</p>
             <p><strong>Trạng thái:</strong> Thành công</p>
             
             <div class='changes-box'>
@@ -1330,7 +1330,7 @@ namespace Services.Commons.Gmail
             <p><strong>Số điện thoại:</strong> {phone}</p>
             <p><strong>Địa chỉ:</strong> {address}</p>
             <p><strong>Ngày đặt:</strong> {order.CreatedAt:dd/MM/yyyy HH:mm}</p>
-            <p><strong>Ngày hủy:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}</p>
+            <p><strong>Ngày hủy:</strong> {DateTime.UtcNow.AddHours(7):dd/MM/yyyy HH:mm}</p>
             <p><strong>Giá trị:</strong> {order.FinalPrice:N0} VNĐ</p>
             <p><strong>Phương thức thanh toán:</strong> {order.PaymentMethod}</p>
             

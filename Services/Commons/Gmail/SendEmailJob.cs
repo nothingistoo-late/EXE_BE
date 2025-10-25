@@ -16,7 +16,7 @@ namespace Services.Commons.Gmail
 
         public async Task Execute(IJobExecutionContext context)
         {
-            _logger.LogInformation("Scheduled email job started at {Time}", DateTime.Now);
+            _logger.LogInformation("Scheduled email job started at {Time}", DateTime.UtcNow.AddHours(7));
 
             try
             {
@@ -27,16 +27,16 @@ namespace Services.Commons.Gmail
                 if (emails.Count > 0)
                 {
                     await _emailQueueService.QueueEmailAsync(emails, subject, message);
-                    _logger.LogInformation("Scheduled emails queued successfully at {Time}", DateTime.Now);
+                    _logger.LogInformation("Scheduled emails queued successfully at {Time}", DateTime.UtcNow.AddHours(7));
                 }
                 else
                 {
-                    _logger.LogWarning("No recipients found for scheduled email at {Time}", DateTime.Now);
+                    _logger.LogWarning("No recipients found for scheduled email at {Time}", DateTime.UtcNow.AddHours(7));
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in scheduled email job at {Time}", DateTime.Now);
+                _logger.LogError(ex, "Error occurred in scheduled email job at {Time}", DateTime.UtcNow.AddHours(7));
             }
         }
 

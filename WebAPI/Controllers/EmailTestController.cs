@@ -130,7 +130,7 @@ namespace WebAPI.Controllers
             {
                 return Ok(new { 
                     Message = "Email configuration test endpoint",
-                    Timestamp = DateTime.UtcNow,
+                    Timestamp = DateTime.UtcNow.AddHours(7),
                     Status = "Ready to send emails"
                 });
             }
