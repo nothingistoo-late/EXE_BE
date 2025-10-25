@@ -92,6 +92,42 @@ namespace WebAPI.Controllers
                 });
             }
         }
+
+        /// <summary>
+        /// Add a custom gift box to cart with selected vegetables and greeting message
+        /// </summary>
+        /// <param name="request">Request containing gift box customization details for cart</param>
+        /// <returns>Added gift box to cart</returns>
+        [HttpPost("add-to-cart")]
+        public async Task<IActionResult> AddGiftBoxToCart([FromBody] AddGiftBoxToCartRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var result = await _giftBoxService.AddGiftBoxToCartAsync(request);
+                
+                if (!result.IsSuccess)
+                {
+                    return BadRequest(result);
+                }
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in AddGiftBoxToCart endpoint");
+                return StatusCode(500, new ApiResult<AddGiftBoxToCartResponse>
+                {
+                    IsSuccess = false,
+                    Message = "An error occurred while adding gift box to cart",
+                    Exception = ex
+                });
+            }
+        }
     }
 }
 

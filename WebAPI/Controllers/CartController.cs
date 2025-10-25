@@ -32,6 +32,16 @@ namespace API.Controllers
         }
 
         /// <summary>
+        /// Lấy thông tin giỏ hàng của user với thông tin GiftBox
+        /// </summary>
+        [HttpGet("{userId:guid}/with-giftbox")]
+        public async Task<IActionResult> GetCartWithGiftBox(Guid userId)
+        {
+            var result = await _cartService.GetCartWithGiftBoxAsync(userId);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
         /// Thêm 1 item vào giỏ hàng
         /// </summary>
         [HttpPost("{userId:guid}/items")]

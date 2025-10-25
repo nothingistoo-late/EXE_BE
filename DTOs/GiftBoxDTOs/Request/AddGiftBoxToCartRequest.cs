@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace DTOs.GiftBoxDTOs.Request
 {
-    public class CreateGiftBoxRequest
+    public class AddGiftBoxToCartRequest
     {
         [Required]
         public Guid UserId { get; set; }
@@ -24,27 +24,7 @@ namespace DTOs.GiftBoxDTOs.Request
         public string LetterScription { get; set; } = string.Empty;
         
         [Required]
+        [Range(1, 1000, ErrorMessage = "Quantity must be between 1 and 1000")]
         public int Quantity { get; set; } = 1;
-        
-        public string? DiscountCode { get; set; }
-        
-        [Required]
-        public BusinessObjects.Common.DeliveryMethod DeliveryMethod { get; set; }
-        
-        [Required]
-        public BusinessObjects.Common.PaymentMethod PaymentMethod { get; set; }
-        
-        [Required]
-        [MaxLength(1000)]
-        public string Address { get; set; } = string.Empty;  // Địa chỉ giao hàng
-        
-        [Required]
-        [MaxLength(100)]
-        public string DeliveryTo { get; set; } = string.Empty;  // Tên người nhận
-        
-        [Required]
-        [MaxLength(20)]
-        public string PhoneNumber { get; set; } = string.Empty;  // Số điện thoại người nhận
     }
 }
-

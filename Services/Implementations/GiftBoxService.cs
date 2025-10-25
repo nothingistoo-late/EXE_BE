@@ -166,6 +166,8 @@ namespace Services.Implementations
                         OrderId = order.Id,
                         Vegetables = JsonConvert.SerializeObject(request.Vegetables),
                         GreetingMessage = request.GreetingMessage,
+                        BoxDescription = request.BoxDescription,
+                        LetterScription = request.LetterScription,
                         Address = request.Address,
                         DeliveryTo = request.DeliveryTo,
                         PhoneNumber = request.PhoneNumber
@@ -181,12 +183,14 @@ namespace Services.Implementations
                         GiftBoxOrderId = giftBoxOrder.Id,
                         Vegetables = request.Vegetables,
                         GreetingMessage = request.GreetingMessage,
+                        BoxDescription = request.BoxDescription,
+                        LetterScription = request.LetterScription,
                         Address = request.Address,
                         DeliveryTo = request.DeliveryTo,
                         PhoneNumber = request.PhoneNumber,
                         TotalPrice = order.TotalPrice,
                         FinalPrice = order.FinalPrice,
-                        CreatedAt = order.CreatedAt,
+                        CreatedAt = _currentTime.GetVietnamTime(),
                         Status = order.Status.ToString()
                     };
 
@@ -197,6 +201,121 @@ namespace Services.Implementations
             {
                 _logger.LogError(ex, "Error creating gift box order");
                 return ApiResult<GiftBoxOrderResponse>.Failure(ex);
+            }
+        }
+
+        public async Task<ApiResult<AddGiftBoxToCartResponse>> AddGiftBoxToCartAsync(AddGiftBoxToCartRequest request)
+        {
+            try
+            {
+                return await _unitOfWork.ExecuteTransactionAsync(async () =>
+                {
+                    // 1. Validate user exists
+                    var userExists = await _unitOfWork.UserRepository.AnyAsync(u => u.Id == request.UserId);
+                    if (!userExists)
+                        return ApiResult<AddGiftBoxToCartResponse>.Failure(new Exception("User not found"));
+
+                    // 2. Get GiftBox type
+                    var giftBox = await _unitOfWork.BoxTypeRepository
+                        .FirstOrDefaultAsync(b => b.Name == "Gift Box");
+                    if (giftBox == null)
+                        return ApiResult<AddGiftBoxToCartResponse>.Failure(new Exception("Gift Box type not found"));
+
+                    // 3. Find or create cart
+                    var cart = await _unitOfWork.OrderRepository
+                        .FirstOrDefaultAsync(o => o.UserId == request.UserId && o.Status == OrderStatus.Cart,
+                                            includes: o => o.OrderDetails);
+
+                    if (cart == null)
+                    {
+                        // Create new cart
+                        cart = new Order
+                        {
+                            Id = Guid.NewGuid(),
+                            UserId = request.UserId,
+                            Status = OrderStatus.Cart,
+                            OrderDetails = new List<OrderDetail>(),
+                            CreatedAt = _currentTime.GetVietnamTime(),
+                            UpdatedAt = _currentTime.GetVietnamTime(),
+                            CreatedBy = _currentUserService.GetUserId() ?? Guid.Empty,
+                            UpdatedBy = _currentUserService.GetUserId() ?? Guid.Empty
+                        };
+                        await _unitOfWork.OrderRepository.AddAsync(cart);
+                        await _unitOfWork.SaveChangesAsync(); // Save cart first
+                    }
+
+                    // 4. Add order detail for GiftBox
+                    var orderDetail = new OrderDetail
+                    {
+                        Id = Guid.NewGuid(),
+                        OrderId = cart.Id,
+                        BoxTypeId = giftBox.Id,
+                        Quantity = request.Quantity,
+                        UnitPrice = giftBox.Price,
+                        CreatedAt = _currentTime.GetVietnamTime(),
+                        UpdatedAt = _currentTime.GetVietnamTime(),
+                        CreatedBy = _currentUserService.GetUserId() ?? Guid.Empty,
+                        UpdatedBy = _currentUserService.GetUserId() ?? Guid.Empty
+                    };
+                    
+                    // Add order detail to repository
+                    await _unitOfWork.OrderDetailRepository.AddAsync(orderDetail);
+                    await _unitOfWork.SaveChangesAsync(); // Save order detail
+
+                    // 5. Reload cart with fresh data to avoid concurrency issues
+                    var freshCart = await _unitOfWork.OrderRepository
+                        .FirstOrDefaultAsync(o => o.Id == cart.Id,
+                                            includes: o => o.OrderDetails);
+
+                    // 6. Calculate total price
+                    freshCart.TotalPrice = freshCart.OrderDetails.Sum(d => d.UnitPrice * d.Quantity);
+                    freshCart.FinalPrice = freshCart.TotalPrice;
+                    freshCart.UpdatedAt = _currentTime.GetVietnamTime();
+                    freshCart.UpdatedBy = _currentUserService.GetUserId() ?? Guid.Empty;
+
+                    // 7. Update cart
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // 7. Create GiftBoxOrder for cart
+                    var giftBoxOrder = new GiftBoxOrder
+                    {
+                        Id = Guid.NewGuid(),
+                        OrderId = cart.Id,
+                        Vegetables = JsonConvert.SerializeObject(request.Vegetables),
+                        GreetingMessage = request.GreetingMessage,
+                        BoxDescription = request.BoxDescription,
+                        LetterScription = request.LetterScription,
+                        Address = string.Empty, // Will be filled during checkout
+                        DeliveryTo = string.Empty, // Will be filled during checkout
+                        PhoneNumber = string.Empty // Will be filled during checkout
+                    };
+
+                    await CreateAsync(giftBoxOrder);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // 8. Create response
+                    var response = new AddGiftBoxToCartResponse
+                    {
+                        CartId = freshCart.Id,
+                        GiftBoxOrderId = giftBoxOrder.Id,
+                        Vegetables = request.Vegetables,
+                        GreetingMessage = request.GreetingMessage,
+                        BoxDescription = request.BoxDescription,
+                        LetterScription = request.LetterScription,
+                        Quantity = request.Quantity,
+                        UnitPrice = giftBox.Price,
+                        TotalPrice = freshCart.TotalPrice,
+                        CreatedAt = _currentTime.GetVietnamTime(),
+                        Status = freshCart.Status.ToString()
+                    };
+
+                    return ApiResult<AddGiftBoxToCartResponse>.Success(response, "Gift box added to cart successfully");
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding gift box to cart");
+                return ApiResult<AddGiftBoxToCartResponse>.Failure(ex);
             }
         }
     }

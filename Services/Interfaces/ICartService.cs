@@ -11,6 +11,7 @@ namespace Services.Interfaces
     public interface ICartService
     {
         Task<ApiResult<CartResponse>> GetCartAsync(Guid userId);
+        Task<ApiResult<CartResponseWithGiftBox>> GetCartWithGiftBoxAsync(Guid userId);
         Task<ApiResult<CartResponse>> AddItemAsync(Guid userId, AddItemDto dto);
         Task<ApiResult<CartResponse>> UpdateItemQuantityAsync(Guid userId, Guid orderDetailId, int quantity);
         Task<ApiResult<bool>> RemoveItemAsync(Guid userId, Guid orderDetailId);

@@ -8,6 +8,7 @@ namespace Services.Interfaces
     {
         Task<ApiResult<GenerateGreetingResponse>> GenerateGreetingAsync(GenerateGreetingRequest request);
         Task<ApiResult<GiftBoxOrderResponse>> CreateGiftBoxOrderAsync(CreateGiftBoxRequest request);
+        Task<ApiResult<AddGiftBoxToCartResponse>> AddGiftBoxToCartAsync(AddGiftBoxToCartRequest request);
     }
 }
 

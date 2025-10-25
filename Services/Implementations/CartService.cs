@@ -73,6 +73,83 @@ namespace Services.Implementations
             }
         }
 
+        // ====================== GET CART WITH GIFTBOX INFO ======================
+        public async Task<ApiResult<CartResponseWithGiftBox>> GetCartWithGiftBoxAsync(Guid userId)
+        {
+            try
+            {
+                _logger.LogInformation("🛒 Getting cart with GiftBox info for user {UserId}", userId);
+                
+                var customer = await _unitOfWork.CustomerRepository
+                      .FirstOrDefaultAsync(c => c.UserId == userId);
+                if (customer == null)
+                {
+                    _logger.LogWarning("❌ Customer not found for user {UserId}", userId);
+                    return ApiResult<CartResponseWithGiftBox>.Failure(new Exception("Không tìm thấy khách hàng với ID: " + userId));
+                }
+
+                var cart = await _unitOfWork.OrderRepository
+                    .FirstOrDefaultAsync(o => o.UserId == userId && o.Status == OrderStatus.Cart,
+                                            includes: o => o.OrderDetails);
+
+                if (cart == null)
+                {
+                    _logger.LogInformation("🛒 No cart found for user {UserId}", userId);
+                    return ApiResult<CartResponseWithGiftBox>.Failure(new Exception("Giỏ hàng của bạn đang trống!!"));
+                }
+
+                // Get GiftBox information for each item
+                var itemsWithGiftBox = new List<CartItemWithGiftBoxResponse>();
+                
+                foreach (var orderDetail in cart.OrderDetails)
+                {
+                    var item = new CartItemWithGiftBoxResponse
+                    {
+                        Id = orderDetail.Id,
+                        BoxTypeId = orderDetail.BoxTypeId,
+                        BoxTypeName = orderDetail.BoxType?.Name ?? string.Empty,
+                        Quantity = orderDetail.Quantity,
+                        UnitPrice = orderDetail.UnitPrice
+                    };
+
+                    // Check if this is a GiftBox item
+                    if (orderDetail.BoxType?.Name == "Gift Box")
+                    {
+                        var giftBoxOrder = await _unitOfWork.GiftBoxOrderRepository
+                            .FirstOrDefaultAsync(g => g.OrderId == cart.Id);
+                        
+                        if (giftBoxOrder != null)
+                        {
+                            item.GiftBoxOrderId = giftBoxOrder.Id;
+                            item.Vegetables = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(giftBoxOrder.Vegetables) ?? new List<string>();
+                            item.GreetingMessage = giftBoxOrder.GreetingMessage;
+                            item.BoxDescription = giftBoxOrder.BoxDescription;
+                            item.LetterScription = giftBoxOrder.LetterScription;
+                        }
+                    }
+
+                    itemsWithGiftBox.Add(item);
+                }
+
+                var response = new CartResponseWithGiftBox
+                {
+                    Id = cart.Id,
+                    TotalPrice = cart.TotalPrice,
+                    FinalPrice = cart.FinalPrice,
+                    Items = itemsWithGiftBox
+                };
+
+                _logger.LogInformation("✅ Cart with GiftBox info retrieved for user {UserId} with {ItemCount} items", 
+                    userId, itemsWithGiftBox.Count);
+                return ApiResult<CartResponseWithGiftBox>.Success(response, "Lấy giỏ hàng với thông tin GiftBox thành công!");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Failed to get cart with GiftBox info for user {UserId}", userId);
+                return ApiResult<CartResponseWithGiftBox>.Failure(new Exception("Có lỗi khi lấy giỏ hàng, nội dung lỗi: "+ex.Message));
+            }
+        }
+
         // ====================== ADD ITEM ======================
         public async Task<ApiResult<CartResponse>> AddItemAsync(Guid userId, AddItemDto dto)
         {
