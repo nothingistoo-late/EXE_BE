@@ -33,6 +33,8 @@ namespace Services.Commons.Gmail
 
         public async Task SendEmailAsync(List<string> to, string subject, string message)
         {
+            await Task.Delay(1000); // ~0.6s để đảm bảo không quá 2 request/s
+
             // Validate inputs
             if (to == null || to.Count == 0)
                 throw new ArgumentException("Recipient list cannot be empty", nameof(to));
