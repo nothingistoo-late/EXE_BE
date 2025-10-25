@@ -235,6 +235,10 @@ namespace Services.Implementations
                             UserId = request.UserId,
                             Status = OrderStatus.Cart,
                             OrderDetails = new List<OrderDetail>(),
+                            Address = string.Empty, // Will be filled during checkout
+                            DeliveryTo = string.Empty, // Will be filled during checkout
+                            PhoneNumber = string.Empty, // Will be filled during checkout
+                            PaymentMethod = PaymentMethod.CashOnDelivery, // Default to Cash, will be updated during checkout
                             CreatedAt = _currentTime.GetVietnamTime(),
                             UpdatedAt = _currentTime.GetVietnamTime(),
                             CreatedBy = _currentUserService.GetUserId() ?? Guid.Empty,
