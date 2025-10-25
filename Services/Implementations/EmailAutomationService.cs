@@ -48,12 +48,23 @@ namespace Services.Implementations
         {
             try
             {
+                _logger.LogInformation("📧 EmailAutomationService: Sending payment success email to {Email} for order {OrderId}", 
+                    userEmail, order.Id);
                 await _emailService.SendPaymentSuccessEmailAsync(userEmail, order);
-                _logger.LogInformation($"Đã gửi email thanh toán thành công cho đơn hàng {order.Id}");
+                _logger.LogInformation("✅ EmailAutomationService: Payment success email sent successfully to {Email} for order {OrderId}", 
+                    userEmail, order.Id);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Lỗi gửi email thanh toán thành công cho đơn hàng {order.Id}");
+                _logger.LogError(ex, "❌❌❌ EmailAutomationService ERROR - Order: {OrderId}, Email: {Email}", order.Id, userEmail);
+                _logger.LogError("❌ Error Message: {ErrorMessage}", ex.Message);
+                _logger.LogError("❌ Error Type: {ErrorType}", ex.GetType().Name);
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError("❌ Inner Exception: {InnerException}", ex.InnerException.Message);
+                }
+                _logger.LogError("❌ Stack Trace: {StackTrace}", ex.StackTrace);
+                throw; // Re-throw để OrderService có thể log thêm
             }
         }
 

@@ -556,24 +556,45 @@ namespace Services.Implementations
                     // Gửi email xác nhận đơn hàng cho khách hàng và thông báo cho admin
                     try
                     {
+                        _logger.LogInformation("📧 Starting email sending for checkout - Order: {OrderId}", cart.Id);
                         var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
                         if (user != null)
                         {
+                            _logger.LogInformation("📧 User found: {Email} for order {OrderId}", user.Email, cart.Id);
+                            
                             // Gửi email xác nhận cho khách hàng
+                            _logger.LogInformation("📧 Sending order confirmation email to {Email} for order {OrderId}", user.Email, cart.Id);
                             await _emailService.SendOrderConfirmationEmailAsync(user.Email, cart);
+                            _logger.LogInformation("✅ Order confirmation email sent for order {OrderId}", cart.Id);
                             
                             // Gửi thông báo cho admin
+                            _logger.LogInformation("📧 Sending admin notification email for order {OrderId}", cart.Id);
                             await _emailService.SendNewOrderNotificationToAdminAsync(cart);
+                            _logger.LogInformation("✅ Admin notification email sent for order {OrderId}", cart.Id);
                             
                             // Gửi cảnh báo đơn hàng giá trị cao (ngưỡng 1 triệu VNĐ)
                             if (cart.FinalPrice > 1000000)
                             {
+                                _logger.LogInformation("📧 Sending high value order alert for order {OrderId} (Value: {Price})", cart.Id, cart.FinalPrice);
                                 await _emailService.SendHighValueOrderAlertAsync(cart, 1000000);
+                                _logger.LogInformation("✅ High value order alert sent for order {OrderId}", cart.Id);
                             }
+                        }
+                        else
+                        {
+                            _logger.LogWarning("❌ User not found for userId {UserId}, skipping email sending for order {OrderId}", userId, cart.Id);
                         }
                     }
                     catch (Exception emailEx)
                     {
+                        _logger.LogError(emailEx, "❌❌❌ EMAIL ERROR during checkout - Order: {OrderId}", cart.Id);
+                        _logger.LogError("❌ Error Message: {ErrorMessage}", emailEx.Message);
+                        _logger.LogError("❌ Error Type: {ErrorType}", emailEx.GetType().Name);
+                        if (emailEx.InnerException != null)
+                        {
+                            _logger.LogError("❌ Inner Exception: {InnerException}", emailEx.InnerException.Message);
+                        }
+                        _logger.LogError("❌ Stack Trace: {StackTrace}", emailEx.StackTrace);
                         // Log lỗi email nhưng không làm fail transaction
                         // Có thể log vào file hoặc database
                     }

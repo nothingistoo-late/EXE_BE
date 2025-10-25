@@ -36,59 +36,142 @@ namespace Services.Commons.Gmail
 
         public async Task SendOrderConfirmationEmailAsync(string toEmail, Order order)
         {
-            // Load order with details and box types
-            var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
-            if (orderWithDetails == null)
+            try
             {
-                _logger.LogWarning("Order {OrderId} not found when sending confirmation email", order.Id);
-                return;
-            }
+                _logger.LogInformation("📧 EXEGmailService: SendOrderConfirmationEmailAsync called for order {OrderId}, email: {Email}", 
+                    order.Id, toEmail);
+                
+                if (string.IsNullOrEmpty(toEmail))
+                {
+                    _logger.LogWarning("❌ Cannot send order confirmation email: toEmail is null or empty for order {OrderId}", order.Id);
+                    throw new ArgumentException("Email cannot be null or empty", nameof(toEmail));
+                }
+                
+                // Load order with details and box types
+                _logger.LogInformation("📧 Loading order details for order {OrderId}", order.Id);
+                var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
+                if (orderWithDetails == null)
+                {
+                    _logger.LogWarning("❌ Order {OrderId} not found when sending confirmation email", order.Id);
+                    throw new Exception($"Order {order.Id} not found");
+                }
+                _logger.LogInformation("✅ Order details loaded successfully for order {OrderId}", order.Id);
 
-            var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
-            var shortOrderId = MaskId(order.Id);
-            var subject = $"Xác nhận đơn hàng - #{shortOrderId}";
-            var body = BuildOrderConfirmationEmailBody(orderWithDetails, userName, maskedUserId, shortOrderId, address);
-            await _emailService.SendEmailAsync(toEmail, subject, body);
+                var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
+                var shortOrderId = MaskId(order.Id);
+                var subject = $"Xác nhận đơn hàng - #{shortOrderId}";
+                _logger.LogInformation("📧 Building email body for order {OrderId}", order.Id);
+                var body = BuildOrderConfirmationEmailBody(orderWithDetails, userName, maskedUserId, shortOrderId, address);
+                _logger.LogInformation("📧 Email body built successfully. Length: {Length} bytes", body.Length);
+
+                _logger.LogInformation("📧 Sending email via IEmailService for order {OrderId}", order.Id);
+                await _emailService.SendEmailAsync(toEmail, subject, body);
+                _logger.LogInformation("✅ EXEGmailService: Order confirmation email sent successfully for order {OrderId}", order.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌❌❌ EXEGmailService ERROR in SendOrderConfirmationEmailAsync - Order: {OrderId}, Email: {Email}", 
+                    order.Id, toEmail);
+                _logger.LogError("❌ Error Message: {ErrorMessage}", ex.Message);
+                _logger.LogError("❌ Error Type: {ErrorType}", ex.GetType().Name);
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError("❌ Inner Exception: {InnerException}", ex.InnerException.Message);
+                }
+                _logger.LogError("❌ Stack Trace: {StackTrace}", ex.StackTrace);
+                throw; // Re-throw để layer trên có thể log
+            }
         }
 
         public async Task SendPaymentSuccessEmailAsync(string toEmail, Order order)
         {
-            if (string.IsNullOrEmpty(toEmail))
+            try
             {
-                _logger.LogWarning("Cannot send payment success email: toEmail is null or empty for order {OrderId}", order.Id);
-                return;
+                _logger.LogInformation("📧 EXEGmailService: SendPaymentSuccessEmailAsync called for order {OrderId}, email: {Email}", 
+                    order.Id, toEmail);
+                
+                if (string.IsNullOrEmpty(toEmail))
+                {
+                    _logger.LogWarning("❌ Cannot send payment success email: toEmail is null or empty for order {OrderId}", order.Id);
+                    throw new ArgumentException("Email cannot be null or empty", nameof(toEmail));
+                }
+                
+                // Load order with details and box types
+                _logger.LogInformation("📧 Loading order details for order {OrderId}", order.Id);
+                var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
+                if (orderWithDetails == null)
+                {
+                    _logger.LogWarning("❌ Order {OrderId} not found when sending payment success email", order.Id);
+                    throw new Exception($"Order {order.Id} not found");
+                }
+                _logger.LogInformation("✅ Order details loaded successfully for order {OrderId}", order.Id);
+                
+                var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
+                var shortOrderId = MaskId(order.Id);
+                var subject = $"Thanh toán thành công - #{shortOrderId}";
+                _logger.LogInformation("📧 Building email body for order {OrderId}", order.Id);
+                var body = BuildPaymentSuccessEmailBody(orderWithDetails, userName, maskedUserId, shortOrderId, address);
+                _logger.LogInformation("📧 Email body built successfully. Length: {Length} bytes", body.Length);
+                
+                _logger.LogInformation("📧 Sending email via IEmailService for order {OrderId}", order.Id);
+                await _emailService.SendEmailAsync(toEmail, subject, body);
+                _logger.LogInformation("✅ EXEGmailService: Payment success email sent successfully for order {OrderId}", order.Id);
             }
-            
-            // Load order with details and box types
-            var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
-            if (orderWithDetails == null)
+            catch (Exception ex)
             {
-                _logger.LogWarning("Order {OrderId} not found when sending payment success email", order.Id);
-                return;
+                _logger.LogError(ex, "❌❌❌ EXEGmailService ERROR in SendPaymentSuccessEmailAsync - Order: {OrderId}, Email: {Email}", 
+                    order.Id, toEmail);
+                _logger.LogError("❌ Error Message: {ErrorMessage}", ex.Message);
+                _logger.LogError("❌ Error Type: {ErrorType}", ex.GetType().Name);
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError("❌ Inner Exception: {InnerException}", ex.InnerException.Message);
+                }
+                _logger.LogError("❌ Stack Trace: {StackTrace}", ex.StackTrace);
+                throw; // Re-throw để layer trên có thể log
             }
-            
-            var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
-            var shortOrderId = MaskId(order.Id);
-            var subject = $"Thanh toán thành công - #{shortOrderId}";
-            var body = BuildPaymentSuccessEmailBody(orderWithDetails, userName, maskedUserId, shortOrderId, address);
-            await _emailService.SendEmailAsync(toEmail, subject, body);
         }
 
         public async Task SendNewOrderNotificationToAdminAsync(Order order)
         {
-            // Load order with details and box types
-            var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
-            if (orderWithDetails == null)
+            try
             {
-                _logger.LogWarning("Order {OrderId} not found when sending admin notification", order.Id);
-                return;
-            }
+                _logger.LogInformation("📧 EXEGmailService: SendNewOrderNotificationToAdminAsync called for order {OrderId}, admin email: {AdminEmail}", 
+                    order.Id, _emailSettings.AdminEmail);
+                
+                // Load order with details and box types
+                _logger.LogInformation("📧 Loading order details for order {OrderId}", order.Id);
+                var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderWithDetailsAsync(order.Id);
+                if (orderWithDetails == null)
+                {
+                    _logger.LogWarning("❌ Order {OrderId} not found when sending admin notification", order.Id);
+                    throw new Exception($"Order {order.Id} not found");
+                }
+                _logger.LogInformation("✅ Order details loaded successfully for order {OrderId}", order.Id);
 
-            var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
-            var shortOrderId = MaskId(order.Id);
-            var subject = $"Đơn hàng mới - #{shortOrderId}";
-            var body = BuildNewOrderNotificationBody(orderWithDetails, userName, maskedUserId, phone, address, shortOrderId);
-            await _emailService.SendEmailAsync(_emailSettings.AdminEmail, subject, body);
+                var (userName, maskedUserId, phone, address) = await GetUserInfoAsync(order.UserId);
+                var shortOrderId = MaskId(order.Id);
+                var subject = $"Đơn hàng mới - #{shortOrderId}";
+                _logger.LogInformation("📧 Building email body for admin notification - order {OrderId}", order.Id);
+                var body = BuildNewOrderNotificationBody(orderWithDetails, userName, maskedUserId, phone, address, shortOrderId);
+                _logger.LogInformation("📧 Email body built successfully. Length: {Length} bytes", body.Length);
+
+                _logger.LogInformation("📧 Sending admin notification email for order {OrderId}", order.Id);
+                await _emailService.SendEmailAsync(_emailSettings.AdminEmail, subject, body);
+                _logger.LogInformation("✅ EXEGmailService: Admin notification email sent successfully for order {OrderId}", order.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌❌❌ EXEGmailService ERROR in SendNewOrderNotificationToAdminAsync - Order: {OrderId}", order.Id);
+                _logger.LogError("❌ Error Message: {ErrorMessage}", ex.Message);
+                _logger.LogError("❌ Error Type: {ErrorType}", ex.GetType().Name);
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError("❌ Inner Exception: {InnerException}", ex.InnerException.Message);
+                }
+                _logger.LogError("❌ Stack Trace: {StackTrace}", ex.StackTrace);
+                throw;
+            }
         }
 
         public async Task SendCustomEmailAsync(string toEmail, string subject, string body)

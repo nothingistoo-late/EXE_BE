@@ -22,17 +22,15 @@ namespace Services.Implementations
     {
         private readonly IMapper _mapper;
         private readonly IEXEGmailService _emailService;
-        private readonly IEmailAutomationService _emailAutomationService;
         private readonly IPendingOrderTrackingService _pendingOrderTrackingService;
         private readonly IPayOSService _payOSService;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<OrderService> _logger;
         
-        public OrderService(IMapper mapper, IGenericRepository<Order, Guid> repository, ICurrentUserService currentUserService, IUnitOfWork unitOfWork, ICurrentTime currentTime, IEXEGmailService emailService, IEmailAutomationService emailAutomationService, IPendingOrderTrackingService pendingOrderTrackingService, IPayOSService payOSService, IHttpContextAccessor httpContextAccessor, ILogger<OrderService> logger) : base(repository, currentUserService, unitOfWork, currentTime)
+        public OrderService(IMapper mapper, IGenericRepository<Order, Guid> repository, ICurrentUserService currentUserService, IUnitOfWork unitOfWork, ICurrentTime currentTime, IEXEGmailService emailService, IPendingOrderTrackingService pendingOrderTrackingService, IPayOSService payOSService, IHttpContextAccessor httpContextAccessor, ILogger<OrderService> logger) : base(repository, currentUserService, unitOfWork, currentTime)
         {
             _mapper = mapper;
             _emailService = emailService;
-            _emailAutomationService = emailAutomationService;
             _pendingOrderTrackingService = pendingOrderTrackingService;
             _payOSService = payOSService;
             _httpContextAccessor = httpContextAccessor;
@@ -801,35 +799,56 @@ namespace Services.Implementations
             await _unitOfWork.SaveChangesAsync();
 
             // Gửi email automation theo trạng thái
+            _logger.LogInformation("📧 Starting email automation for order {OrderId} with status {Status}", order.Id, status);
             try
             {
                 var user = await _unitOfWork.UserRepository.GetByIdAsync(order.UserId);
+                _logger.LogInformation("📧 User lookup result for order {OrderId}: Found={Found}, Email={Email}", 
+                    order.Id, user != null, user?.Email ?? "NULL");
+                
                 if (user?.Email != null)
                 {
+                    _logger.LogInformation("📧 Sending email to {Email} for order {OrderId} with status {Status}", 
+                        user.Email, order.Id, status);
+                    
                     switch (status)
                     {
                         case OrderStatus.Completed:
-                            await _emailAutomationService.SendPaymentSuccessEmailAsync(order, user.Email);
-                            _logger.LogInformation("Sent payment success email for order {OrderId}", order.Id);
+                            _logger.LogInformation("📧 Sending payment success email to {Email} for order {OrderId}", 
+                                user.Email, order.Id);
+                            await _emailService.SendPaymentSuccessEmailAsync(user.Email, order);
+                            _logger.LogInformation("✅ Payment success email sent for order {OrderId}", order.Id);
                             break;
                         case OrderStatus.Processing:
-                            await _emailAutomationService.SendOrderPreparationEmailAsync(order, user.Email);
-                            _logger.LogInformation("Sent order preparation email for order {OrderId}", order.Id);
+                            _logger.LogInformation("📧 Sending order preparation email to {Email} for order {OrderId}", 
+                                user.Email, order.Id);
+                            await _emailService.SendOrderPreparationEmailAsync(user.Email, order);
+                            _logger.LogInformation("✅ Order preparation email sent for order {OrderId}", order.Id);
                             break;
                         case OrderStatus.Cancelled:
-                            await _emailAutomationService.SendOrderCancelledEmailAsync(order, user.Email, "Đơn hàng bị hủy");
-                            _logger.LogInformation("Sent order cancelled email for order {OrderId}", order.Id);
+                            _logger.LogInformation("📧 Sending order cancelled email to {Email} for order {OrderId}", 
+                                user.Email, order.Id);
+                            await _emailService.SendOrderCancelledEmailAsync(user.Email, order, "Đơn hàng bị hủy");
+                            _logger.LogInformation("✅ Order cancelled email sent for order {OrderId}", order.Id);
                             break;
                     }
                 }
                 else
                 {
-                    _logger.LogWarning("User email not found for order {OrderId}, skipping email automation", order.Id);
+                    _logger.LogWarning("❌ User email not found for order {OrderId}, skipping email automation", order.Id);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send email automation for order {OrderId} with status {Status}", order.Id, status);
+                _logger.LogError(ex, "❌❌❌ EMAIL ERROR - Order: {OrderId}, Status: {Status}", order.Id, status);
+                _logger.LogError("❌ Error Message: {ErrorMessage}", ex.Message);
+                _logger.LogError("❌ Error Type: {ErrorType}", ex.GetType().Name);
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError("❌ Inner Exception: {InnerException}", ex.InnerException.Message);
+                }
+                _logger.LogError("❌ Stack Trace: {StackTrace}", ex.StackTrace);
+                _logger.LogError("❌ Source: {Source}", ex.Source);
                 // Không throw exception để không ảnh hưởng đến việc cập nhật trạng thái đơn hàng
             }
 
