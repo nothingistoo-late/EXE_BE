@@ -505,6 +505,7 @@ namespace Services.Implementations
                         if (status == OrderStatus.Completed)
                         {
                             order.IsPaid = true;
+                            order.PaymentStatus = PaymentStatus.Paid;
                         }
                         
                         await _unitOfWork.OrderRepository.UpdateAsync(order);

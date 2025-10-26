@@ -419,16 +419,16 @@ namespace Services.Commons.Gmail
 <body>
     <div class='container'>
         <div class='header'>
-            <h1>Welcome to MyApp!</h1>
+            <h1>Welcome to Vegie!</h1>
         </div>
         <div class='content'>
             <h2>Xin chào {userName},</h2>
-            <p>Cảm ơn bạn đã đăng ký tài khoản tại MyApp!</p>
+            <p>Cảm ơn bạn đã đăng ký tài khoản tại Vegie!</p>
             <p>Tài khoản của bạn đã được kích hoạt thành công. Bạn có thể đăng nhập và bắt đầu sử dụng dịch vụ của chúng tôi.</p>
             <p>Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với chúng tôi.</p>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp. All rights reserved.</p>
+            <p>&copy; 2025 Vegie. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -500,7 +500,7 @@ namespace Services.Commons.Gmail
             <p>Chúng tôi sẽ xử lý đơn hàng của bạn trong thời gian sớm nhất.</p>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp. All rights reserved.</p>
+            <p>&copy; 2025 Vegie. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -572,10 +572,10 @@ namespace Services.Commons.Gmail
             </div>
             
             <p>Đơn hàng sẽ được giao trong vòng 3-5 ngày làm việc.</p>
-            <p>Cảm ơn bạn đã mua hàng tại MyApp!</p>
+            <p>Cảm ơn bạn đã mua hàng tại Vegie!</p>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp. All rights reserved.</p>
+            <p>&copy; 2025 Vegie. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -655,7 +655,7 @@ namespace Services.Commons.Gmail
             <p><strong>Vui lòng xử lý đơn hàng này trong thời gian sớm nhất.</strong></p>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp - Admin Notification System</p>
+            <p>&copy; 2025 Vegie - Admin Notification System</p>
         </div>
     </div>
 </body>
@@ -769,10 +769,10 @@ namespace Services.Commons.Gmail
             </table>
             
             <p>Chúng tôi sẽ thông báo khi đơn hàng được giao cho đơn vị vận chuyển.</p>
-            <p>Cảm ơn bạn đã tin tưởng và mua hàng tại MyApp!</p>
+            <p>Cảm ơn bạn đã tin tưởng và mua hàng tại Vegie!</p>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp. All rights reserved.</p>
+            <p>&copy; 2025 Vegie. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -836,10 +836,10 @@ namespace Services.Commons.Gmail
             </table>
             
             <p>Nếu bạn hài lòng với sản phẩm, hãy để lại đánh giá để giúp chúng tôi cải thiện dịch vụ.</p>
-            <p>Cảm ơn bạn đã tin tưởng và mua hàng tại MyApp!</p>
+            <p>Cảm ơn bạn đã tin tưởng và mua hàng tại Vegie!</p>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp. All rights reserved.</p>
+            <p>&copy; 2025 Vegie. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -890,7 +890,7 @@ namespace Services.Commons.Gmail
             <p>Chúng tôi xin lỗi vì sự bất tiện này. Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ với chúng tôi.</p>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp. All rights reserved.</p>
+            <p>&copy; 2025 Vegie. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -944,10 +944,10 @@ namespace Services.Commons.Gmail
             </ul>
             
             <p>Nếu bạn không nhận được tiền trong thời gian trên, vui lòng liên hệ với chúng tôi.</p>
-            <p>Cảm ơn bạn đã tin tưởng MyApp!</p>
+            <p>Cảm ơn bạn đã tin tưởng Vegie!</p>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp. All rights reserved.</p>
+            <p>&copy; 2025 Vegie. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -978,7 +978,7 @@ namespace Services.Commons.Gmail
         </div>
         <div class='content'>
             <h2>Xin chào {userName},</h2>
-            <p>Cảm ơn bạn đã đăng ký tài khoản tại MyApp!</p>
+            <p>Cảm ơn bạn đã đăng ký tài khoản tại Vegie!</p>
             <p>Để hoàn tất quá trình đăng ký, vui lòng xác thực địa chỉ email của bạn bằng cách nhấn vào nút bên dưới:</p>
             
             <div style='text-align: center;'>
@@ -992,7 +992,7 @@ namespace Services.Commons.Gmail
             <p>Nếu bạn không tạo tài khoản này, vui lòng bỏ qua email này.</p>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp. All rights reserved.</p>
+            <p>&copy; 2025 Vegie. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -1041,7 +1041,7 @@ namespace Services.Commons.Gmail
             <p>Nếu bạn gặp khó khăn, vui lòng liên hệ với bộ phận hỗ trợ khách hàng.</p>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp. All rights reserved.</p>
+            <p>&copy; 2025 Vegie. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -1095,10 +1095,10 @@ namespace Services.Commons.Gmail
                 <li>Đăng xuất khỏi các thiết bị công cộng</li>
             </ul>
             
-            <p>Cảm ơn bạn đã sử dụng dịch vụ của MyApp!</p>
+            <p>Cảm ơn bạn đã sử dụng dịch vụ của Vegie!</p>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp. All rights reserved.</p>
+            <p>&copy; 2025 Vegie. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -1147,10 +1147,10 @@ namespace Services.Commons.Gmail
                 <li>Thay đổi mật khẩu để bảo mật tài khoản</li>
             </ul>
             
-            <p>Cảm ơn bạn đã sử dụng dịch vụ của MyApp!</p>
+            <p>Cảm ơn bạn đã sử dụng dịch vụ của Vegie!</p>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp. All rights reserved.</p>
+            <p>&copy; 2025 Vegie. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -1219,7 +1219,7 @@ namespace Services.Commons.Gmail
             </div>
             
             <div style='text-align: center;'>
-                <a href='https://myapp.com/cart' class='cta-button'>Hoàn tất thanh toán ngay</a>
+                <a href='https://Vegie.com/cart' class='cta-button'>Hoàn tất thanh toán ngay</a>
             </div>
             
             <p><strong>Ưu đãi đặc biệt:</strong> Hoàn tất thanh toán trong 24 giờ tới để nhận được miễn phí vận chuyển!</p>
@@ -1227,7 +1227,7 @@ namespace Services.Commons.Gmail
             <p>Nếu bạn gặp khó khăn trong quá trình thanh toán, vui lòng liên hệ với chúng tôi.</p>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp. All rights reserved.</p>
+            <p>&copy; 2025 Vegie. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -1289,7 +1289,7 @@ namespace Services.Commons.Gmail
             <p>Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ với bộ phận hỗ trợ khách hàng.</p>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp. All rights reserved.</p>
+            <p>&copy; 2025 Vegie. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -1373,7 +1373,7 @@ namespace Services.Commons.Gmail
             </ul>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp - Admin Alert System</p>
+            <p>&copy; 2025 Vegie - Admin Alert System</p>
         </div>
     </div>
 </body>
@@ -1431,7 +1431,7 @@ namespace Services.Commons.Gmail
             </ul>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp - Admin Alert System</p>
+            <p>&copy; 2025 Vegie - Admin Alert System</p>
         </div>
     </div>
 </body>
@@ -1490,7 +1490,7 @@ namespace Services.Commons.Gmail
             </ul>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp - Admin Alert System</p>
+            <p>&copy; 2025 Vegie - Admin Alert System</p>
         </div>
     </div>
 </body>
@@ -1550,7 +1550,7 @@ namespace Services.Commons.Gmail
             </ul>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp - Admin Alert System</p>
+            <p>&copy; 2025 Vegie - Admin Alert System</p>
         </div>
     </div>
 </body>
@@ -1609,7 +1609,7 @@ namespace Services.Commons.Gmail
             </ul>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp - Admin Alert System</p>
+            <p>&copy; 2025 Vegie - Admin Alert System</p>
         </div>
     </div>
 </body>
@@ -1668,7 +1668,7 @@ namespace Services.Commons.Gmail
             </ul>
         </div>
         <div class='footer'>
-            <p>&copy; 2025 MyApp - Admin Alert System</p>
+            <p>&copy; 2025 Vegie - Admin Alert System</p>
         </div>
     </div>
 </body>
