@@ -103,6 +103,7 @@ namespace Repositories.Implements
                 LastName = u.User.LastName ?? string.Empty,
                 Email = u.User.Email ?? string.Empty,
                 Gender = u.User.Gender.ToString(), 
+                PhoneNumber = u.User.PhoneNumber,
                 CreateAt = u.User.CreatedAt,
                 UpdateAt = u.User.UpdatedAt,
                 Roles = userRolesDict.TryGetValue(u.User.Id, out var roles) ? roles : new List<string>()
