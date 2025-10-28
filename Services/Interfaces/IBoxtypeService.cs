@@ -1,4 +1,5 @@
-﻿using DTOs.BoxType.Respond;
+﻿using DTOs.BoxType.Request;
+using DTOs.BoxType.Respond;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +14,8 @@ namespace Services.Interfaces
         Task<ApiResult<List<BoxTypeRespondDTO>>> GetAllAsync();
         Task<ApiResult<List<BoxTypeRespondDTO>>> GetByParentIdAsync(Guid parentId);
         Task<ApiResult<List<BoxTypeRespondDTO>>> SearchByNameAsync(string keyword);
+        Task<ApiResult<BoxTypeRespondDTO>> UpdateAsync(Guid id, UpdateBoxTypeRequest request);
+        Task<ApiResult<bool>> DeleteAsync(Guid id);
     }
 
 }
