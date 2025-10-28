@@ -69,7 +69,9 @@ namespace Services.Implementations
                     {
                         UserId = user.Id,
                         Address = dto.Address,
+                        CreatedAt = _currentTime.GetVietnamTime(),
                 };
+                user.CreatedAt = _currentTime.GetVietnamTime();
 
                 await _repository.AddAsync(customer);
                 await _unitOfWork.SaveChangesAsync();
