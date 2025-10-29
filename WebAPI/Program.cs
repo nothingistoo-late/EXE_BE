@@ -51,6 +51,9 @@ app.UseHttpsRedirection();
 
 app.UseRouting(); 
 
+// Serve static files in wwwroot (for uploaded avatars)
+app.UseStaticFiles();
+
 app.UseCors("CorsPolicy"); 
 
 app.Use(async (context, next) =>

@@ -26,6 +26,7 @@ namespace WebAPI.Extensions
             services.Configure<HuggingFaceOptions>(configuration.GetSection("HuggingFace"));
             services.Configure<GroqOptions>(configuration.GetSection("Groq"));
             services.Configure<DTOs.Options.PayOSOptions>(configuration.GetSection("PayOS"));
+            services.Configure<DTOs.Options.CloudinaryOptions>(configuration.GetSection(DTOs.Options.CloudinaryOptions.SectionName));
 
             // 2. DbContext và CORS
             services.AddDbContext<EXE_BE>(opt =>
@@ -129,6 +130,8 @@ namespace WebAPI.Extensions
             // Registered via AddEmailServices as HttpClient-typed
             services.AddScoped<IEXEGmailService, EXEGmailService>();
             services.AddScoped<IStatisticsService, StatisticsService>();
+            // Use Cloudinary for image storage
+            services.AddScoped<IImageStorageService, CloudinaryStorageService>();
             // Use GroqAIService for AI functionality
             services.AddScoped<IAIService>(provider =>
             {

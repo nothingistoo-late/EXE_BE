@@ -2,6 +2,8 @@
 using DTOs.Customer.Request;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
+using System.IO;
 
 namespace WebAPI.Controllers
 {
@@ -12,10 +14,12 @@ namespace WebAPI.Controllers
     public class CustomersController : Controller
     {
         private readonly ICustomerService _customerService;
+        private readonly IImageStorageService _imageStorage;
 
-        public CustomersController(ICustomerService customerService)
+        public CustomersController(ICustomerService customerService, IImageStorageService imageStorage)
         {
             _customerService = customerService;
+            _imageStorage = imageStorage;
         }
 
         /// <summary>
@@ -89,8 +93,16 @@ namespace WebAPI.Controllers
         /// Cập nhật thông tin profile (chỉ sửa những trường được truyền lên)
         /// </summary>
         [HttpPut("me")]
-        public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateMyProfileRequest request)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UpdateMyProfile([FromForm] UpdateMyProfileRequest request, IFormFile? avatar)
         {
+            // Nếu có ảnh upload thì lưu vào wwwroot/uploads/avatars và gán ImgURL
+            if (avatar != null && avatar.Length > 0)
+            {
+                var uploadedUrl = await _imageStorage.UploadAsync(avatar);
+                request.ImgURL = uploadedUrl;
+            }
+
             var result = await _customerService.UpdateMyProfileAsync(request);
 
             if (!result.IsSuccess)
