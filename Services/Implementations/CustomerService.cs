@@ -285,5 +285,72 @@ namespace Services.Implementations
                 return ApiResult<MyProfileResponse>.Failure(new Exception("Lỗi khi cập nhật thông tin cá nhân: " + ex.Message));
             }
         }
+
+        public async Task<ApiResult<string>> ChangePasswordAsync(CustomerChangePasswordRequest request)
+        {
+            try
+            {
+                // 1. Validate request
+                if (request == null)
+                    return ApiResult<string>.Failure(new ArgumentException("Request không hợp lệ"));
+
+                if (string.IsNullOrWhiteSpace(request.OldPassword))
+                    return ApiResult<string>.Failure(new ArgumentException("Mật khẩu cũ không được để trống"));
+
+                if (string.IsNullOrWhiteSpace(request.NewPassword))
+                    return ApiResult<string>.Failure(new ArgumentException("Mật khẩu mới không được để trống"));
+
+                if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
+                    return ApiResult<string>.Failure(new ArgumentException("Xác nhận mật khẩu không được để trống"));
+
+                // 2. Validate NewPassword == ConfirmPassword
+                if (request.NewPassword != request.ConfirmPassword)
+                    return ApiResult<string>.Failure(new ArgumentException("Mật khẩu mới và xác nhận mật khẩu không khớp"));
+
+                // 3. Lấy userId từ token
+                var userId = _currentUserService.GetUserId();
+                if (userId == null)
+                    return ApiResult<string>.Failure(new InvalidOperationException("Không tìm thấy thông tin người dùng hiện tại. Vui lòng đăng nhập lại."));
+
+                // 4. Lấy user từ database
+                var user = await _userManager.FindByIdAsync(userId.ToString());
+                if (user == null)
+                    return ApiResult<string>.Failure(new InvalidOperationException("Không tìm thấy người dùng"));
+
+                // 5. Verify old password
+                var isOldPasswordCorrect = await _userManager.CheckPasswordAsync(user, request.OldPassword);
+                if (!isOldPasswordCorrect)
+                    return ApiResult<string>.Failure(new UnauthorizedAccessException("Mật khẩu cũ không đúng"));
+
+                // 6. Đổi password
+                var changePasswordResult = await _userManager.ChangePasswordAsync(user, request.OldPassword, request.NewPassword);
+                if (!changePasswordResult.Succeeded)
+                {
+                    var errors = string.Join(", ", changePasswordResult.Errors.Select(e => e.Description));
+                    return ApiResult<string>.Failure(new InvalidOperationException($"Không thể đổi mật khẩu: {errors}"));
+                }
+
+                // 7. Update security stamp (để invalidate các token cũ)
+                await _userManager.UpdateSecurityStampAsync(user);
+
+                // 8. Gửi email thông báo
+                try
+                {
+                    var userName = user.UserName ?? user.Email ?? "Người dùng";
+                    await _emailService.SendPasswordChangedEmailAsync(user.Email ?? string.Empty, userName);
+                }
+                catch (Exception emailEx)
+                {
+                    // Log lỗi email nhưng không làm fail việc đổi mật khẩu
+                    // Có thể log vào file hoặc database nếu cần
+                }
+
+                return ApiResult<string>.Success("Đổi mật khẩu thành công", "Mật khẩu đã được thay đổi thành công. Email thông báo đã được gửi đến bạn.");
+            }
+            catch (Exception ex)
+            {
+                return ApiResult<string>.Failure(new Exception($"Lỗi khi đổi mật khẩu: {ex.Message}"));
+            }
+        }
     }
 }

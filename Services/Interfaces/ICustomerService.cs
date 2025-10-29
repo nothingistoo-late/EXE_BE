@@ -19,5 +19,6 @@ namespace Services.Interfaces
 
         Task<ApiResult<MyProfileResponse?>> GetMyProfileAsync();
         Task<ApiResult<MyProfileResponse>> UpdateMyProfileAsync(UpdateMyProfileRequest request);
+        Task<ApiResult<string>> ChangePasswordAsync(CustomerChangePasswordRequest request);
     }
 }

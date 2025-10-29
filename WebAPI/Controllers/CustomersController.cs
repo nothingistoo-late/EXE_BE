@@ -109,5 +109,22 @@ namespace WebAPI.Controllers
                 return BadRequest(result);
             return Ok(result); // trả về ApiResult<MyProfileResponse>
         }
+
+        /// <summary>
+        /// Đổi mật khẩu cho customer hiện tại
+        /// </summary>
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] CustomerChangePasswordRequest request)
+        {
+            if (request == null)
+                return BadRequest(new { isSuccess = false, message = "Request không hợp lệ" });
+
+            var result = await _customerService.ChangePasswordAsync(request);
+
+            if (!result.IsSuccess)
+                return BadRequest(result);
+
+            return Ok(result);
+        }
     }
 }
