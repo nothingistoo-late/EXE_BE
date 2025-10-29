@@ -67,7 +67,7 @@ namespace Services.Helpers.Mapers
             };
         }
 
-        public static CurrentUserResponse ToCurrentUserResponse(this User user, string? accessToken = default)
+        public static CurrentUserResponse ToCurrentUserResponse(this User user, string? accessToken = default, string? refreshToken = default)
         {
             return new CurrentUserResponse
             {
@@ -80,7 +80,8 @@ namespace Services.Helpers.Mapers
                 Address = string.Empty,
                 CreateAt = user.CreatedAt,
                 UpdateAt = user.UpdatedAt,
-                AccessToken = accessToken
+                AccessToken = accessToken,
+                RefreshToken = refreshToken
             };
         }
 

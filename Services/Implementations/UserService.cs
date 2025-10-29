@@ -1,15 +1,18 @@
 ﻿using DTOs.UserDTOs.Request;
+using DTOs.UserDTOs.Identities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Repositories;
 using Repositories.Interfaces;
 using Services.Helpers;
 using Services.Helpers.Mapers;
 using Services.Interfaces;
 using Services.Interfaces.Services.Commons.User;
 using System.Text;
+using System.Text.Json;
 using UserDTOs.DTOs.Response;
 
 namespace Services.Implementations
@@ -26,6 +29,7 @@ namespace Services.Implementations
         private readonly string _resetPasswordUri;
         private readonly IUserRepository _userRepository;
         private readonly ICurrentTime _currentTime;
+        private readonly EXE_BE _context;
 
         public UserService(
             UserManager<User> userManager,
@@ -36,7 +40,8 @@ namespace Services.Implementations
             IUserEmailService userEmailService,
             IConfiguration configuration,
             IUserRepository userRepository,
-            ICurrentTime currentTime)
+            ICurrentTime currentTime,
+            EXE_BE context)
         {
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
             _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
@@ -47,6 +52,7 @@ namespace Services.Implementations
             //_resetPasswordUri = configuration["Frontend:ResetPasswordUri"] ?? throw new ArgumentNullException(nameof(configuration), "ResetPasswordUri is missing");
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
             _currentTime = currentTime ?? throw new ArgumentNullException(nameof(currentTime));
+            _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
         //public async Task<ApiResult<UserResponse>> RegisterAsync(UserRegisterRequest req)
@@ -318,16 +324,87 @@ namespace Services.Implementations
             if (req == null || string.IsNullOrWhiteSpace(req.RefreshToken))
                 return ApiResult<CurrentUserResponse>.Failure(new ArgumentException("Invalid request"));
 
-            var uid = _currentUserService.GetUserId();
-            if (uid == null)
-                return ApiResult<CurrentUserResponse>.Failure(new InvalidOperationException("User not found"));
+            // Tìm user từ refresh token trong database (không cần access token vì nó có thể đã expired)
+            User? user = null;
+            RefreshTokenInfo? matchedTokenInfo = null;
+            
+            try
+            {
+                var currentTime = _currentTime.GetVietnamTime();
+                var refreshToken = req.RefreshToken.Trim();
 
-            var user = await _userManager.FindByIdAsync(uid.ToString());
-            if (user == null || !await _userManager.ValidateRefreshTokenAsync(user, req.RefreshToken))
-                return ApiResult<CurrentUserResponse>.Failure(new UnauthorizedAccessException("Invalid refresh token"));
+                // Query tất cả refresh tokens và deserialize để tìm match
+                var userTokens = await _context.UserTokens
+                    .Where(ut => 
+                        ut.LoginProvider == "System Admin" && 
+                        ut.Name == "RefreshToken" &&
+                        !string.IsNullOrEmpty(ut.Value))
+                    .ToListAsync();
 
+                _logger.LogInformation("Checking {Count} refresh tokens", userTokens.Count);
+
+                foreach (var userToken in userTokens)
+                {
+                    try
+                    {
+                        var tokenInfo = JsonSerializer.Deserialize<RefreshTokenInfo>(userToken.Value);
+                        if (tokenInfo == null)
+                            continue;
+
+                        // So sánh token (case-sensitive, exact match)
+                        if (tokenInfo.Token?.Trim() == refreshToken)
+                        {
+                            // Kiểm tra expiry
+                            if (tokenInfo.Expiry > currentTime)
+                            {
+                                // Tìm thấy token hợp lệ, lấy user
+                                user = await _userManager.FindByIdAsync(userToken.UserId.ToString());
+                                if (user != null)
+                                {
+                                    matchedTokenInfo = tokenInfo;
+                                    _logger.LogInformation("Found valid refresh token for user {UserId}", user.Id);
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                _logger.LogWarning("Refresh token found but expired. Expiry: {Expiry}, Current: {Current}", 
+                                    tokenInfo.Expiry, currentTime);
+                            }
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to deserialize refresh token for user {UserId}", userToken.UserId);
+                        continue;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Error processing refresh token for user {UserId}", userToken.UserId);
+                        continue;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error finding user by refresh token");
+            }
+
+            // Nếu không tìm thấy user hoặc token không hợp lệ
+            if (user == null || matchedTokenInfo == null)
+            {
+                _logger.LogWarning("Invalid or expired refresh token");
+                return ApiResult<CurrentUserResponse>.Failure(new UnauthorizedAccessException("Invalid or expired refresh token"));
+            }
+
+            // Generate new token pair
             var token = await _tokenService.GenerateToken(user);
-            return ApiResult<CurrentUserResponse>.Success(UserMappings.ToCurrentUserResponse(user, token.Data), "Token refreshed successfully");
+            var newRefreshTokenInfo = _tokenService.GenerateRefreshToken();
+            await _userManager.SetRefreshTokenAsync(user, newRefreshTokenInfo);
+            
+            var response = UserMappings.ToCurrentUserResponse(user, token.Data, newRefreshTokenInfo.Token);
+            
+            return ApiResult<CurrentUserResponse>.Success(response, "Token refreshed successfully");
         }
 
         public async Task<ApiResult<RevokeRefreshTokenResponse>> RevokeRefreshTokenAsync(RefreshTokenRequest req)

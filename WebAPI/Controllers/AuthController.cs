@@ -102,6 +102,7 @@ namespace WebAPI.Controllers
         /// <summary>
         /// Kiểm tra thời gian sống của token hiện tại
         /// </summary>
+        [AllowAnonymous]
         [HttpGet("check-token")]
         [Authorize]
         public IActionResult CheckToken()
