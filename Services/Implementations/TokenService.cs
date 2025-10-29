@@ -68,7 +68,8 @@ namespace Services.Implementations
                 issuer: _jwtSettings.ValidIssuer,
                 audience: _jwtSettings.ValidAudience,
                 claims: claims,
-                expires: _currentTime.GetVietnamTime().AddMinutes(_jwtSettings.Expires),
+                //expires: _currentTime.GetVietnamTime().AddMinutes(_jwtSettings.Expires),
+                expires: DateTime.UtcNow.AddMinutes(_jwtSettings.Expires), // dùng UTC
                 signingCredentials: signingCredentials
             );
         }
