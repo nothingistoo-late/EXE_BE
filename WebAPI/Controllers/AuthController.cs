@@ -1,10 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Services.Interfaces;
 using DTOs.UserDTOs.Request;
 using DTOs.UserDTOs.Response;
 using BusinessObjects;
 using Microsoft.AspNetCore.Identity;
 using Services.Commons.Gmail;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace WebAPI.Controllers
 {
@@ -94,6 +97,79 @@ namespace WebAPI.Controllers
                 return BadRequest(result);
             }
             return Ok(result);
+        }
+
+        /// <summary>
+        /// Kiểm tra thời gian sống của token hiện tại
+        /// </summary>
+        [HttpGet("check-token")]
+        [Authorize]
+        public IActionResult CheckToken()
+        {
+            try
+            {
+                // Lấy token từ header Authorization
+                var authHeader = Request.Headers["Authorization"].ToString();
+                if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+                {
+                    return BadRequest(new
+                    {
+                        isSuccess = false,
+                        message = "Token không tìm thấy trong header"
+                    });
+                }
+
+                var token = authHeader.Substring("Bearer ".Length).Trim();
+                
+                // Decode token (không validate, chỉ lấy thông tin)
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var jsonToken = tokenHandler.ReadJwtToken(token);
+                
+                // Lấy thời gian hết hạn (ValidTo hoặc từ Exp claim)
+                var expiryTime = jsonToken.ValidTo;
+                
+                if (expiryTime == DateTime.MinValue)
+                {
+                    // Fallback: lấy từ Expiration claim nếu ValidTo không có
+                    var expValue = jsonToken.Payload.Expiration;
+                    if (!expValue.HasValue)
+                    {
+                        return BadRequest(new
+                        {
+                            isSuccess = false,
+                            message = "Token không có thông tin hết hạn"
+                        });
+                    }
+                    expiryTime = DateTimeOffset.FromUnixTimeSeconds(expValue.Value).DateTime;
+                }
+                var currentTime = DateTime.UtcNow;
+                var remainingTime = expiryTime - currentTime;
+                var isExpired = remainingTime <= TimeSpan.Zero;
+
+                return Ok(new
+                {
+                    isSuccess = true,
+                    message = isExpired ? "Token đã hết hạn" : "Token còn hiệu lực",
+                    data = new
+                    {
+                        expiresAt = expiryTime,
+                        expiresAtLocal = expiryTime.ToLocalTime(),
+                        remainingMinutes = isExpired ? 0 : Math.Max(0, (int)remainingTime.TotalMinutes),
+                        remainingSeconds = isExpired ? 0 : Math.Max(0, (int)remainingTime.TotalSeconds),
+                        isExpired = isExpired,
+                        currentTime = currentTime,
+                        currentTimeLocal = currentTime.ToLocalTime()
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    isSuccess = false,
+                    message = $"Lỗi khi kiểm tra token: {ex.Message}"
+                });
+            }
         }
 
         /// <summary>
