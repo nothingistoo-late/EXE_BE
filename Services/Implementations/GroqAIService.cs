@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -145,18 +146,19 @@ namespace Services.Implementations
                     throw new ArgumentException("Receiver, occasion, and mainWish cannot be null or empty.");
                 }
 
-                var prompt = $@"Bạn là một AI chuyên viết lời chúc để ghi trên quà tặng.  
-Hãy tạo một lời chúc ngắn gọn, ý nghĩa và phù hợp để viết trên thiệp hoặc in trên quà.  
-Thông tin đầu vào:  
-- Người nhận: {Receiver}  
-- Dịp tặng: {occasion}  
-- Thông điệp chính muốn gửi gắm: {mainWish}  
-- Tùy chỉnh thêm: {custom ?? "Không có yêu cầu đặc biệt"}
+                var customText = !string.IsNullOrWhiteSpace(custom) ? $"\n- Yêu cầu thêm: {custom}" : "";
+                
+                var prompt = $@"Viết ngay lời chúc dựa trên thông tin sau. CHỈ viết lời chúc, KHÔNG viết thêm bất kỳ câu nào khác (KHÔNG viết giải thích, KHÔNG viết 'Dưới đây là...', KHÔNG viết tiêu đề).
 
-Yêu cầu đầu ra:  
-- Một câu chúc duy nhất, 2–3 dòng là đủ, cô đọng nhưng truyền cảm xúc.  
-- Giữ cho lời chúc phù hợp với dịp, không bị chung chung.  
-- Có thể sáng tạo bằng hình ảnh, ẩn dụ hoặc vần điệu nếu hợp ngữ cảnh.";
+Thông tin:
+- Người nhận: {Receiver}
+- Dịp: {occasion}  
+- Ý chính: {mainWish}{customText}
+
+QUAN TRỌNG: 
+- Bắt đầu trực tiếp bằng lời chúc
+- Chỉ viết 3-5 câu chúc
+- KHÔNG giải thích, KHÔNG mở đầu, KHÔNG kết thúc bằng câu ngoài lời chúc";
 
                 var request = new GroqRequest
                 {
@@ -164,13 +166,18 @@ Yêu cầu đầu ra:
                     {
                         new GroqMessage
                         {
+                            Role = "system",
+                            Content = "Bạn là một AI chuyên viết lời chúc ngắn gọn. Bạn CHỈ trả về lời chúc, không bao giờ viết giải thích hay câu dẫn nào khác."
+                        },
+                        new GroqMessage
+                        {
                             Role = "user",
                             Content = prompt
                         }
                     },
                     Model = _model,
-                    MaxTokens = 500,
-                    Temperature = 0.8
+                    MaxTokens = 150,
+                    Temperature = 0.3
                 };
 
                 var uri = "https://api.groq.com/openai/v1/chat/completions";
@@ -196,12 +203,137 @@ Yêu cầu đầu ra:
                 }
 
                 var result = payload.Choices[0];
-                return result.Message?.Content ?? "Xin lỗi, tôi không thể tạo lời chúc lúc này.";
+                var rawContent = result.Message?.Content ?? "Xin lỗi, tôi không thể tạo lời chúc lúc này.";
+                
+                // Tự động tách lấy phần lời chúc thực sự, loại bỏ các câu giải thích
+                return ExtractWishFromResponse(rawContent);
             }
             catch (Exception ex)
             {
                 return $"Error generating wish: {ex.Message}";
             }
+        }
+        
+        private string ExtractWishFromResponse(string response)
+        {
+            if (string.IsNullOrWhiteSpace(response))
+                return response;
+
+            // 1) Ưu tiên: lấy nội dung trong dấu ngoặc kép bằng Regex (hỗ trợ ", “ ”, ‘ ’)
+            //    Lấy đoạn đầu tiên tìm được
+            var quotePatterns = new[]
+            {
+                "\"(?<q>.+?)\"",
+                "“(?<q>.+?)”",
+                "‘(?<q>.+?)’",
+                "'(?<q>.+?)'"
+            };
+            foreach (var pattern in quotePatterns)
+            {
+                var m = System.Text.RegularExpressions.Regex.Match(response, pattern, System.Text.RegularExpressions.RegexOptions.Singleline);
+                if (m.Success)
+                {
+                    var q = m.Groups["q"].Value.Trim();
+                    if (!string.IsNullOrWhiteSpace(q))
+                        return q;
+                }
+            }
+
+            // 1b) Fallback: cắt từ dấu ngoặc kép đầu tiên tới dấu ngoặc kép đóng tương ứng
+            int firstQuoteIdx = response.IndexOfAny(new[] { '"', '“', '‘', '\'' });
+            if (firstQuoteIdx >= 0)
+            {
+                char open = response[firstQuoteIdx];
+                char close = open == '“' ? '”' : open == '‘' ? '’' : open;
+                int closeIdx = response.IndexOf(close, firstQuoteIdx + 1);
+                if (closeIdx > firstQuoteIdx + 1)
+                {
+                    var between = response.Substring(firstQuoteIdx + 1, closeIdx - firstQuoteIdx - 1).Trim();
+                    if (!string.IsNullOrWhiteSpace(between))
+                        return between;
+                }
+            }
+
+            // Các cụm từ giải thích cần bỏ
+            var skipLinePrefixes = new[]
+            {
+                "Dưới đây là",
+                "Đây là",
+                "Hoặc một phiên bản",
+                "Hoặc phiên bản",
+                "Hoặc một lựa chọn",
+                "Hoặc một lựa chọn khác",
+                "Hoặc lựa chọn khác",
+                "Một lời chúc",
+                "Câu chúc",
+                "Ví dụ",
+                "Gợi ý",
+                "Tôi có thể",
+                "Tôi viết",
+                "Tôi đã",
+                "Lời chúc:",
+                "Tôi hy vọng",
+            };
+
+            // Thử lấy phần sau dấu ':' khi trước đó là cụm giải thích ngắn
+            int colon = response.IndexOf(':');
+            if (colon > 0)
+            {
+                var before = response.Substring(0, colon).Trim();
+                foreach (var p in skipLinePrefixes)
+                {
+                    if (before.StartsWith(p, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var after = response.Substring(colon + 1).Trim();
+                        after = after.Trim('"', '“', '”', '\'', '’', '«', '»');
+                        if (!string.IsNullOrWhiteSpace(after))
+                            return after;
+                    }
+                }
+            }
+
+            // 3) Rà từng dòng, tìm đoạn (paragraph) đầu tiên không phải giải thích
+            var lines = response.Split(new[] { '\n', '\r' }, StringSplitOptions.None);
+            var cleaned = new List<string>();
+            bool startedParagraph = false;
+            foreach (var raw in lines)
+            {
+                var line = (raw ?? string.Empty).Trim();
+                if (!startedParagraph)
+                {
+                    if (string.IsNullOrWhiteSpace(line))
+                        continue; // bỏ khoảng trắng đầu
+
+                    bool skip = false;
+                    foreach (var p in skipLinePrefixes)
+                    {
+                        if (line.StartsWith(p, StringComparison.OrdinalIgnoreCase))
+                        {
+                            skip = true;
+                            break;
+                        }
+                    }
+                    if (skip)
+                        continue;
+
+                    // Bắt đầu lấy đoạn này làm lời chúc
+                    startedParagraph = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    // Kết thúc đoạn đầu
+                    break;
+                }
+
+                if (line.StartsWith("- ")) line = line.Substring(2).Trim();
+                line = line.Trim('"', '“', '”', '\'', '’', '«', '»');
+                cleaned.Add(line);
+            }
+
+            var result = string.Join(" ", cleaned);
+            result = result.Trim('"', '“', '”', '\'', '’', '«', '»').Trim();
+            return string.IsNullOrWhiteSpace(result) ? response.Trim() : result;
         }
 
         // DTOs for Groq API

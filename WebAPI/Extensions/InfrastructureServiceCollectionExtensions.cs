@@ -80,7 +80,9 @@ namespace WebAPI.Extensions
                     ValidateIssuerSigningKey = true,
                     ValidIssuer = jwt.ValidIssuer,
                     ValidAudience = jwt.ValidAudience,
-                    IssuerSigningKey = key
+                    IssuerSigningKey = key,
+                    ClockSkew = TimeSpan.Zero
+
                 };
                 // Custom error handling
                 opts.Events = new JwtBearerEvents
