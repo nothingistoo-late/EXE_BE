@@ -103,12 +103,22 @@ namespace Services.Helpers.Mappers
 
             // Map Order -> OrderResponse
             CreateMap<Order, OrderResponse>()
-                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId)) // giả sử Order có CustomerId
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
                 .ForMember(dest => dest.OrderDate, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice))
+                .ForMember(dest => dest.FinalPrice, opt => opt.MapFrom(src => src.FinalPrice))
+                .ForMember(dest => dest.DiscountCode, opt => opt.MapFrom(src => src.DiscountCode))
+                .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Address))
+                .ForMember(dest => dest.DeliveryTo, opt => opt.MapFrom(src => src.DeliveryTo))
+                .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
+                .ForMember(dest => dest.AllergyNote, opt => opt.MapFrom(src => src.AllergyNote))
+                .ForMember(dest => dest.PreferenceNote, opt => opt.MapFrom(src => src.PreferenceNote))
                 .ForMember(dest => dest.PaymentMethod, opt => opt.MapFrom(src => src.PaymentMethod.ToString()))
                 .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => src.PaymentStatus.ToString()))
                 .ForMember(dest => dest.PayOSPaymentUrl, opt => opt.MapFrom(src => src.PayOSPaymentUrl))
+                .ForMember(dest => dest.PayOSOrderCode, opt => opt.MapFrom(src => src.PayOSOrderCode))
                 .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.OrderDetails));
 
             // Map OrderDetail -> OrderDetailResponse
@@ -121,7 +131,6 @@ namespace Services.Helpers.Mappers
                 .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
                 .ForMember(dest => dest.OrderDate, opt => opt.MapFrom(src => src.CreatedAt))
-                .ForMember(dest => dest.ScheduledDeliveryDate, opt => opt.MapFrom(src => src.ScheduledDeliveryDate ?? src.CreatedAt))
                 .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice))
                 .ForMember(dest => dest.FinalPrice, opt => opt.MapFrom(src => src.FinalPrice))
                 .ForMember(dest => dest.DiscountCode, opt => opt.MapFrom(src => src.DiscountCode))
@@ -130,8 +139,6 @@ namespace Services.Helpers.Mappers
                 .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
                 .ForMember(dest => dest.PaymentMethod, opt => opt.MapFrom(src => src.PaymentMethod.ToString()))
                 .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => src.PaymentStatus.ToString()))
-                .ForMember(dest => dest.IsWeeklyPackage, opt => opt.MapFrom(src => src.IsWeeklyPackage))
-                .ForMember(dest => dest.WeeklyPackageId, opt => opt.MapFrom(src => src.WeeklyPackageId ?? Guid.Empty))
                 .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.OrderDetails));
 
             // Map từ CreateDTO -> Entity

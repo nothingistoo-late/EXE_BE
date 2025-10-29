@@ -25,7 +25,6 @@ namespace DTOs.OrderDTOs.Respond
         public Guid UserId { get; set; }
         public string Status { get; set; } = string.Empty;
         public DateTime OrderDate { get; set; }
-        public DateTime ScheduledDeliveryDate { get; set; }  // Ngày giao hàng dự kiến
         public double TotalPrice { get; set; }
         public double FinalPrice { get; set; }
         public string? DiscountCode { get; set; }
@@ -39,8 +38,6 @@ namespace DTOs.OrderDTOs.Respond
         
         public string PaymentMethod { get; set; } = string.Empty;
         public string PaymentStatus { get; set; } = string.Empty;
-        public bool IsWeeklyPackage { get; set; } = true;
-        public Guid WeeklyPackageId { get; set; }
         public List<OrderDetailResponse> Details { get; set; } = new();
     }
 }

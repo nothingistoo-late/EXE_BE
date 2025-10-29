@@ -121,6 +121,11 @@ namespace Repositories
                     .IsUnique()
                     .HasDatabaseName("IX_UserDiscounts_UserId_DiscountId");
             });
+
+            // Configure Order entity
+            // Note: Removed weekly package fields (IsWeeklyPackage, WeeklyPackageId, ScheduledDeliveryDate)
+            // EF Core will automatically ignore database columns that don't have corresponding properties
+            // If you still have these columns in database, create a migration to drop them
         }
     }
 }

@@ -29,11 +29,6 @@ namespace BusinessObjects
         public string? AllergyNote { get; set; }  // Ghi chú về dị ứng thực phẩm
         public string? PreferenceNote { get; set; }  // Ghi chú về sở thích ăn uống
         
-        // Weekly Package fields
-        public bool IsWeeklyPackage { get; set; } = false;  // Đánh dấu đơn hàng thuộc gói hàng tuần
-        public Guid? WeeklyPackageId { get; set; }  // ID nhóm các đơn hàng trong gói hàng tuần
-        public DateTime? ScheduledDeliveryDate { get; set; }  // Ngày giao hàng dự kiến cho đơn hàng trong gói
-        
         // PayOS fields
         public string? PayOSPaymentLinkId { get; set; }
         public string? PayOSPaymentUrl { get; set; }

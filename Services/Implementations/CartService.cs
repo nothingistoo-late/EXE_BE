@@ -235,10 +235,6 @@ namespace Services.Implementations
                         PhoneNumber = "Temporary - Will be updated during checkout",
                         DeliveryMethod = DeliveryMethod.Standard, // Default delivery method
                         PaymentMethod = PaymentMethod.CashOnDelivery, // Default payment method
-                        // Weekly Package fields (default values for cart)
-                        IsWeeklyPackage = false,
-                        WeeklyPackageId = null,
-                        ScheduledDeliveryDate = null,
                         // BaseEntity fields
                         CreatedAt = _currentTime.GetVietnamTime(),
                         UpdatedAt = _currentTime.GetVietnamTime(),
