@@ -25,6 +25,9 @@ namespace Repositories.WorkSeeds.Implements
         private IUserDiscountRepository? _userDiscountRepository;
         private IReviewRepository? _reviewRepository;
         private IGiftBoxOrderRepository? _giftBoxOrderRepository;
+        private IWeeklyBlindBoxSubscriptionRepository? _weeklyBlindBoxSubscriptionRepository;
+        private IWeeklyDeliveryScheduleRepository? _weeklyDeliveryScheduleRepository;
+        
         public UnitOfWork(EXE_BE context, IRepositoryFactory repositoryFactory, ILogger<UnitOfWork> logger)
         {
             _context = context;
@@ -57,6 +60,11 @@ namespace Repositories.WorkSeeds.Implements
             _reviewRepository ??= _repositoryFactory.GetCustomRepository<IReviewRepository>();
         public IGiftBoxOrderRepository GiftBoxOrderRepository => 
             _giftBoxOrderRepository ??= _repositoryFactory.GetCustomRepository<IGiftBoxOrderRepository>();
+        public IWeeklyBlindBoxSubscriptionRepository WeeklyBlindBoxSubscriptionRepository => 
+            _weeklyBlindBoxSubscriptionRepository ??= _repositoryFactory.GetCustomRepository<IWeeklyBlindBoxSubscriptionRepository>();
+        public IWeeklyDeliveryScheduleRepository WeeklyDeliveryScheduleRepository => 
+            _weeklyDeliveryScheduleRepository ??= _repositoryFactory.GetCustomRepository<IWeeklyDeliveryScheduleRepository>();
+        
         public IGenericRepository<TEntity, TKey> GetRepository<TEntity, TKey>()
             where TEntity : class
         {

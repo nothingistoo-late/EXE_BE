@@ -30,6 +30,8 @@ namespace Repositories
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<UserDiscount> UserDiscounts { get; set; }
         public DbSet<Review> Reviews { get; set; }
+        public DbSet<WeeklyBlindBoxSubscription> WeeklyBlindBoxSubscriptions { get; set; }
+        public DbSet<WeeklyDeliverySchedule> WeeklyDeliverySchedules { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -123,9 +125,47 @@ namespace Repositories
             });
 
             // Configure Order entity
-            // Note: Removed weekly package fields (IsWeeklyPackage, WeeklyPackageId, ScheduledDeliveryDate)
-            // EF Core will automatically ignore database columns that don't have corresponding properties
-            // If you still have these columns in database, create a migration to drop them
+            // Note: Order chỉ được tạo khi user đăng ký gói để thanh toán
+            // Lịch giao hàng được lưu riêng trong WeeklyDeliverySchedule, không link với orders
+
+            // Configure WeeklyBlindBoxSubscription entity
+            modelBuilder.Entity<WeeklyBlindBoxSubscription>(entity =>
+            {
+                entity.ToTable("WeeklyBlindBoxSubscriptions");
+                entity.HasKey(e => e.Id);
+                
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(e => e.BoxType)
+                    .WithMany()
+                    .HasForeignKey(e => e.BoxTypeId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasMany(e => e.DeliverySchedules)
+                    .WithOne(d => d.Subscription)
+                    .HasForeignKey(d => d.SubscriptionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configure WeeklyDeliverySchedule entity
+            modelBuilder.Entity<WeeklyDeliverySchedule>(entity =>
+            {
+                entity.ToTable("WeeklyDeliverySchedules");
+                entity.HasKey(e => e.Id);
+                
+                entity.HasOne(e => e.Subscription)
+                    .WithMany(s => s.DeliverySchedules)
+                    .HasForeignKey(e => e.SubscriptionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                
+                // Index để query nhanh theo subscription và tuần
+                entity.HasIndex(e => new { e.SubscriptionId, e.WeekStartDate })
+                    .IsUnique()
+                    .HasDatabaseName("IX_WeeklyDeliverySchedules_SubscriptionId_WeekStartDate");
+            });
         }
     }
 }

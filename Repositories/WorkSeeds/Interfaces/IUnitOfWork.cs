@@ -17,6 +17,7 @@ namespace Repositories.WorkSeeds.Interfaces
         IUserDiscountRepository UserDiscountRepository { get; }
         IReviewRepository ReviewRepository { get; }
         IGiftBoxOrderRepository GiftBoxOrderRepository { get; }
-        
+        IWeeklyBlindBoxSubscriptionRepository WeeklyBlindBoxSubscriptionRepository { get; }
+        IWeeklyDeliveryScheduleRepository WeeklyDeliveryScheduleRepository { get; }
     }
 }

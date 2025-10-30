@@ -121,6 +121,8 @@ namespace WebAPI.Extensions
             services.AddScoped<IUserDiscountRepository, UserDiscountRepository>();
             services.AddScoped<IGiftBoxOrderRepository, GiftBoxOrderRepository>();
             services.AddScoped<IReviewRepository, ReviewRepository>();
+            services.AddScoped<IWeeklyBlindBoxSubscriptionRepository, WeeklyBlindBoxSubscriptionRepository>();
+            services.AddScoped<IWeeklyDeliveryScheduleRepository, WeeklyDeliveryScheduleRepository>();
 
             services.AddScoped<ICurrentUserService, CurrentUserService>();
             services.AddScoped<ITokenService, TokenService>();
@@ -144,8 +146,11 @@ namespace WebAPI.Extensions
             // OTP Service
             services.AddScoped<IOTPService, OTPService>();
 
-        // Email Automation Service
-        services.AddScoped<IEmailAutomationService, EmailAutomationService>();
+            // Email Automation Service
+            services.AddScoped<IEmailAutomationService, EmailAutomationService>();
+
+            // Weekly BlindBox Subscription Service
+            services.AddScoped<IWeeklyBlindBoxSubscriptionService, WeeklyBlindBoxSubscriptionService>();
         
         // Payment Failure Tracking Service
         services.AddScoped<IPaymentFailureTrackingService, PaymentFailureTrackingService>();
