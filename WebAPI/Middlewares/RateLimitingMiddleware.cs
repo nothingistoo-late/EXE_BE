@@ -17,7 +17,7 @@ namespace WebAPI.Middlewares
         // Timer dọn dẹp định kỳ
         private readonly Timer _cleanupTimer;
         
-        private const int MAX_REQUESTS = 2; // Số lượng requests tối đa
+        private const int MAX_REQUESTS = 5; // Số lượng requests tối đa
         private const int TIME_WINDOW_SECONDS = 1; // Time window (1 giây)
         private const int BLOCK_SECONDS = 5; // Khoá trong 15 giây khi vượt ngưỡng
         
