@@ -11,8 +11,7 @@ namespace DTOs.Customer.Request
     public class UpdateMyProfileRequest
     {
         // Thuộc User
-        public string? FirstName { get; set; } = null!;
-        public string? LastName { get; set; } = null!;
+        public string? FullName { get; set; }
         public string? PhoneNumber { get; set; }
         public Gender? Gender { get; set; } = null!;
 

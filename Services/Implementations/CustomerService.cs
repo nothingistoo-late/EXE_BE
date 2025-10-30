@@ -247,11 +247,24 @@ namespace Services.Implementations
                 var user = customer.User;
 
                 // --- USER ---
-                if (!string.IsNullOrWhiteSpace(request.FirstName))
-                    user.FirstName = request.FirstName;
-
-                if (!string.IsNullOrWhiteSpace(request.LastName))
-                    user.LastName = request.LastName;
+                // Tách FullName thành FirstName và LastName
+                if (!string.IsNullOrWhiteSpace(request.FullName))
+                {
+                    var nameParts = request.FullName.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (nameParts.Length > 0)
+                    {
+                        user.FirstName = nameParts[0];
+                        // Nếu có nhiều hơn 1 phần, gộp phần còn lại thành LastName
+                        if (nameParts.Length > 1)
+                        {
+                            user.LastName = string.Join(" ", nameParts.Skip(1));
+                        }
+                        else
+                        {
+                            user.LastName = string.Empty;
+                        }
+                    }
+                }
 
                 if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
                     user.PhoneNumber = request.PhoneNumber;
