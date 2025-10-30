@@ -267,7 +267,19 @@ namespace Services.Implementations
                 }
 
                 if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
-                    user.PhoneNumber = request.PhoneNumber;
+                {
+                    var normalizedPhone = request.PhoneNumber.Trim();
+                    // Kiểm tra trùng số điện thoại với user khác (không tính user hiện tại và user đã xoá)
+                    var phoneExists = await _context.Users
+                        .AnyAsync(u => u.PhoneNumber == normalizedPhone && u.Id != user.Id && !u.IsDeleted);
+
+                    if (phoneExists)
+                    {
+                        return ApiResult<MyProfileResponse>.Failure(new Exception("Số điện thoại đã được sử dụng bởi tài khoản khác."));
+                    }
+
+                    user.PhoneNumber = normalizedPhone;
+                }
 
                 if (request.Gender.HasValue)
                     user.Gender = request.Gender.Value; // ví dụ "Male"

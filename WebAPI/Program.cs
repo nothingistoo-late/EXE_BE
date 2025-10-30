@@ -66,6 +66,10 @@ app.UseAuthentication();
 app.UseMiddleware<SecurityStampValidationMiddleware>(); // Middleware Security Stamp của bạn
 app.UseAuthorization();
 
+// Rate limiting middleware - giới hạn 3 requests/giây cho mỗi user
+// Đặt sau authentication để có thể lấy UserId nếu đã authenticated
+app.UseRateLimiting();
+
 app.MapControllers();
 
 app.Run();
