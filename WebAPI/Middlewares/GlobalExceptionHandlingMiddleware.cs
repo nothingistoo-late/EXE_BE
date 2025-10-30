@@ -49,12 +49,12 @@ namespace WebAPI.Middlewares
 
                 case UnauthorizedAccessException:
                     context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                    response.Message = "Unauthorized access";
+                    response.Message = "Truy cập không được phép";
                     break;
 
                 case KeyNotFoundException:
                     context.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    response.Message = "Resource not found";
+                    response.Message = "Không tìm thấy tài nguyên";
                     break;
 
                 case ArgumentException argEx:
@@ -64,7 +64,7 @@ namespace WebAPI.Middlewares
 
                 default:
                     context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                    response.Message = "An internal server error occurred";
+                    response.Message = "Đã xảy ra lỗi máy chủ nội bộ";
                     break;
             }
 
@@ -82,9 +82,9 @@ namespace WebAPI.Middlewares
             {
                 ValidationException => exception.Message,
                 ArgumentException => exception.Message,
-                KeyNotFoundException => "Resource not found",
-                UnauthorizedAccessException => "Unauthorized access",
-                _ => "An error occurred while processing your request"
+                KeyNotFoundException => "Không tìm thấy tài nguyên",
+                UnauthorizedAccessException => "Truy cập không được phép",
+                _ => "Đã xảy ra lỗi trong quá trình xử lý yêu cầu của bạn"
             };
         }
     }

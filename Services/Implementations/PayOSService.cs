@@ -34,7 +34,7 @@ namespace Services.Implementations
                 var amount = Math.Max(1, (int)request.Amount);
 
                 // URL-encode description để tránh ký tự đặc biệt và giới hạn 25 ký tự
-                var safeDescription = (request.Description?.Replace("#", "") ?? "Payment for Order").Substring(0, Math.Min(25, (request.Description?.Replace("#", "") ?? "Payment for Order").Length));
+                var safeDescription = (request.Description?.Replace("#", "") ?? "Thanh toán đơn hàng").Substring(0, Math.Min(25, (request.Description?.Replace("#", "") ?? "Thanh toán đơn hàng").Length));
 
                 // Tạo signature trước khi tạo paymentData
                 var signature = CreatePayOSSignature(amount.ToString(), orderCode.ToString(), safeDescription, _options.ReturnUrl, _options.CancelUrl, _options.ChecksumKey);
@@ -94,9 +94,9 @@ namespace Services.Implementations
                             var code = codeElement.GetString();
                             if (code != "00") // PayOS success code
                             {
-                                var desc = responseJson.TryGetProperty("desc", out var descElement) ? descElement.GetString() : "Unknown error";
+                                var desc = responseJson.TryGetProperty("desc", out var descElement) ? descElement.GetString() : "Lỗi không xác định";
                                 _logger.LogError("PayOS API error: {Code} - {Description}", code, desc);
-                                return ApiResult<PaymentLinkResponse>.Failure(new Exception($"PayOS API error: {desc}"));
+                                return ApiResult<PaymentLinkResponse>.Failure(new Exception($"Lỗi PayOS API: {desc}"));
                             }
                         }
                         
@@ -118,18 +118,18 @@ namespace Services.Implementations
                         }
                         
                         _logger.LogWarning("PayOS API returned no data. Response: {ResponseContent}", responseContent);
-                        return ApiResult<PaymentLinkResponse>.Failure(new Exception("PayOS API returned no data"));
+                        return ApiResult<PaymentLinkResponse>.Failure(new Exception("PayOS API không trả về dữ liệu"));
                     }
                     catch (JsonException ex)
                     {
                         _logger.LogError(ex, "Failed to parse PayOS response: {ResponseContent}", responseContent);
-                        return ApiResult<PaymentLinkResponse>.Failure(new Exception($"Failed to parse PayOS response: {ex.Message}"));
+                        return ApiResult<PaymentLinkResponse>.Failure(new Exception($"Không thể phân tích phản hồi PayOS: {ex.Message}"));
                     }
                 }
                 else
                 {
                     _logger.LogError("PayOS API error: {StatusCode} - {ResponseContent}", response.StatusCode, responseContent);
-                    return ApiResult<PaymentLinkResponse>.Failure(new Exception($"PayOS API error: {response.StatusCode}"));
+                    return ApiResult<PaymentLinkResponse>.Failure(new Exception($"Lỗi PayOS API: {response.StatusCode}"));
                 }
             }
             catch (Exception ex)

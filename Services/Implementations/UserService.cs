@@ -105,11 +105,11 @@ namespace Services.Implementations
         public async Task<ApiResult<string>> ConfirmEmailAsync(Guid userId, string encodedToken)
         {
             if (string.IsNullOrWhiteSpace(encodedToken))
-                return ApiResult<string>.Failure(new ArgumentException("Invalid token"));
+                return ApiResult<string>.Failure(new ArgumentException("Mã token không hợp lệ"));
 
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
-                return ApiResult<string>.Failure(new InvalidOperationException("User not found"));
+                return ApiResult<string>.Failure(new InvalidOperationException("Không tìm thấy người dùng"));
 
             string token;
             try
@@ -119,7 +119,7 @@ namespace Services.Implementations
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to decode token for user {UserId}", userId);
-                return ApiResult<string>.Failure(new ArgumentException("Invalid token format"));
+                return ApiResult<string>.Failure(new ArgumentException("Định dạng token không hợp lệ"));
             }
 
             var res = await _userManager.ConfirmEmailAsync(user, token);
@@ -127,7 +127,7 @@ namespace Services.Implementations
             {
                 _logger.LogWarning("Email confirmation failed for user {UserId}. Errors: {Errors}",
                     userId, string.Join(", ", res.Errors.Select(e => e.Description)));
-                return ApiResult<string>.Failure(new InvalidOperationException("Email confirmation failed: " + string.Join(", ", res.Errors.Select(e => e.Description))));
+                return ApiResult<string>.Failure(new InvalidOperationException("Xác minh email thất bại: " + string.Join(", ", res.Errors.Select(e => e.Description))));
             }
 
             return ApiResult<string>.Success("Email confirmed successfully", "Email confirmed successfully");
@@ -136,7 +136,7 @@ namespace Services.Implementations
         public async Task<ApiResult<string>> ResendConfirmationEmailAsync(string email)
         {
             if (string.IsNullOrWhiteSpace(email))
-                return ApiResult<string>.Failure(new ArgumentException("Invalid email"));
+                return ApiResult<string>.Failure(new ArgumentException("Email không hợp lệ"));
 
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
@@ -155,7 +155,7 @@ namespace Services.Implementations
         public async Task<ApiResult<string>> InitiatePasswordResetAsync(ForgotPasswordRequestDTO request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.Email))
-                return ApiResult<string>.Failure(new ArgumentException("Invalid email"));
+                return ApiResult<string>.Failure(new ArgumentException("Email không hợp lệ"));
 
             var genericResponse = ApiResult<string>.Success("If the email is valid, you'll receive password reset instructions", "Password reset process initiated");
             var user = await _userManager.FindByEmailAsync(request.Email);
@@ -174,16 +174,16 @@ namespace Services.Implementations
         public async Task<ApiResult<string>> ResetPasswordAsync(ResetPasswordRequestDTO request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.OTPCode) || string.IsNullOrWhiteSpace(request.NewPassword))
-                return ApiResult<string>.Failure(new ArgumentException("Invalid request"));
+                return ApiResult<string>.Failure(new ArgumentException("Yêu cầu không hợp lệ"));
 
             var user = await _userManager.FindByEmailAsync(request.Email);
             if (user == null)
-                return ApiResult<string>.Failure(new InvalidOperationException("Invalid request"));
+                return ApiResult<string>.Failure(new InvalidOperationException("Yêu cầu không hợp lệ"));
             _logger.LogDebug("Incoming OTP (request): {RequestOTP}", request.OTPCode);
 
             // Note: This method is deprecated in favor of the new OTP-based reset in AuthController
             // Keeping for backward compatibility but should use AuthController.ResetPassword instead
-            return ApiResult<string>.Failure(new InvalidOperationException("This method is deprecated. Please use /api/Auth/reset-password instead."));
+            return ApiResult<string>.Failure(new InvalidOperationException("Phương thức này đã bị ngừng. Vui lòng sử dụng /api/Auth/reset-password."));
         }
 
         //public async Task<ApiResult<PagedList<UserDetailsDTO>>> SearchUsersAsync(
@@ -249,7 +249,7 @@ namespace Services.Implementations
         {
             // 1. Guard clause
             if (req is null || string.IsNullOrWhiteSpace(req.EmailOrPhoneNumber) || string.IsNullOrWhiteSpace(req.Password))
-                return ApiResult<UserResponse>.Failure(new ArgumentException("Invalid request"));
+                return ApiResult<UserResponse>.Failure(new ArgumentException("Yêu cầu không hợp lệ"));
 
             _logger.LogInformation("Login attempt: {Login}", req.EmailOrPhoneNumber);
 
@@ -263,7 +263,7 @@ namespace Services.Implementations
             {
                 if (user is not null)
                     await _userManager.AccessFailedAsync(user);
-                return ApiResult<UserResponse>.Failure(new UnauthorizedAccessException("Invalid username/email or password"));
+                return ApiResult<UserResponse>.Failure(new UnauthorizedAccessException("Tên đăng nhập/email hoặc mật khẩu không đúng"));
             }
 
             // 4. Verify account state
@@ -271,7 +271,7 @@ namespace Services.Implementations
             //    return ApiResult<UserResponse>.Failure(new InvalidOperationException("Please confirm your email before logging in"));
 
             if (await _userManager.IsLockedOutAsync(user))
-                return ApiResult<UserResponse>.Failure(new InvalidOperationException("Account is locked"));
+                return ApiResult<UserResponse>.Failure(new InvalidOperationException("Tài khoản đã bị khóa"));
 
             // 5. Reset failed-count & issue tokens
             await _userManager.ResetAccessFailedAsync(user);
@@ -289,7 +289,7 @@ namespace Services.Implementations
         {
             var userDetails = await _userRepository.GetUserDetailsByIdAsync(id);
             if (userDetails == null)
-                return ApiResult<UserResponse>.Failure(new InvalidOperationException("User not found"));
+                return ApiResult<UserResponse>.Failure(new InvalidOperationException("Không tìm thấy người dùng"));
 
             return ApiResult<UserResponse>.Success(await UserMappings.ToUserResponseAsync(userDetails, _userManager), "User retrieved successfully");
         }
@@ -298,11 +298,11 @@ namespace Services.Implementations
         {
             var uid = _currentUserService.GetUserId();
             if (uid == null)
-                return ApiResult<CurrentUserResponse>.Failure(new InvalidOperationException("User not found"));
+                return ApiResult<CurrentUserResponse>.Failure(new InvalidOperationException("Không tìm thấy người dùng"));
 
             var user = await _userManager.FindByIdAsync(uid.ToString());
             if (user == null)
-                return ApiResult<CurrentUserResponse>.Failure(new InvalidOperationException("User not found"));
+                return ApiResult<CurrentUserResponse>.Failure(new InvalidOperationException("Không tìm thấy người dùng"));
 
             var token = await _tokenService.GenerateToken(user);
             var resp = UserMappings.ToCurrentUserResponse(user, token.Data);
@@ -322,7 +322,7 @@ namespace Services.Implementations
         public async Task<ApiResult<CurrentUserResponse>> RefreshTokenAsync(RefreshTokenRequest req)
         {
             if (req == null || string.IsNullOrWhiteSpace(req.RefreshToken))
-                return ApiResult<CurrentUserResponse>.Failure(new ArgumentException("Invalid request"));
+                return ApiResult<CurrentUserResponse>.Failure(new ArgumentException("Yêu cầu không hợp lệ"));
 
             // Tìm user từ refresh token trong database (không cần access token vì nó có thể đã expired)
             User? user = null;
@@ -394,7 +394,7 @@ namespace Services.Implementations
             if (user == null || matchedTokenInfo == null)
             {
                 _logger.LogWarning("Invalid or expired refresh token");
-                return ApiResult<CurrentUserResponse>.Failure(new UnauthorizedAccessException("Invalid or expired refresh token"));
+                return ApiResult<CurrentUserResponse>.Failure(new UnauthorizedAccessException("Refresh token không hợp lệ hoặc đã hết hạn"));
             }
 
             // Generate new token pair
@@ -410,15 +410,15 @@ namespace Services.Implementations
         public async Task<ApiResult<RevokeRefreshTokenResponse>> RevokeRefreshTokenAsync(RefreshTokenRequest req)
         {
             if (req == null || string.IsNullOrWhiteSpace(req.RefreshToken))
-                return ApiResult<RevokeRefreshTokenResponse>.Failure(new ArgumentException("Invalid request"));
+                return ApiResult<RevokeRefreshTokenResponse>.Failure(new ArgumentException("Yêu cầu không hợp lệ"));
 
             var uid = _currentUserService.GetUserId();
             if (uid == null)
-                return ApiResult<RevokeRefreshTokenResponse>.Failure(new InvalidOperationException("User not found"));
+                return ApiResult<RevokeRefreshTokenResponse>.Failure(new InvalidOperationException("Không tìm thấy người dùng"));
 
             var user = await _userManager.FindByIdAsync(uid.ToString());
             if (user == null || !await _userManager.ValidateRefreshTokenAsync(user, req.RefreshToken))
-                return ApiResult<RevokeRefreshTokenResponse>.Failure(new UnauthorizedAccessException("Invalid refresh token"));
+                return ApiResult<RevokeRefreshTokenResponse>.Failure(new UnauthorizedAccessException("Refresh token không hợp lệ"));
 
             var rem = await _userManager.RemoveRefreshTokenAsync(user);
             if (!rem.Succeeded)
@@ -430,15 +430,15 @@ namespace Services.Implementations
         public async Task<ApiResult<string>> ChangePasswordAsync(ChangePasswordRequest req)
         {
             if (req == null || string.IsNullOrWhiteSpace(req.OldPassword) || string.IsNullOrWhiteSpace(req.NewPassword))
-                return ApiResult<string>.Failure(new ArgumentException("Invalid request"));
+                return ApiResult<string>.Failure(new ArgumentException("Yêu cầu không hợp lệ"));
 
             var uid = _currentUserService.GetUserId();
             if (uid == null)
-                return ApiResult<string>.Failure(new InvalidOperationException("User not found"));
+                return ApiResult<string>.Failure(new InvalidOperationException("Không tìm thấy người dùng"));
 
             var user = await _userManager.FindByIdAsync(uid.ToString());
             if (user == null)
-                return ApiResult<string>.Failure(new InvalidOperationException("User not found"));
+                return ApiResult<string>.Failure(new InvalidOperationException("Không tìm thấy người dùng"));
 
             var res = await _userManager.ChangeUserPasswordAsync(user, req.OldPassword, req.NewPassword);
             if (!res.Succeeded)
@@ -452,11 +452,11 @@ namespace Services.Implementations
         public async Task<ApiResult<UserResponse>> UpdateAsync(Guid id, UpdateUserRequest req)
         {
             if (req == null)
-                return ApiResult<UserResponse>.Failure(new ArgumentException("Invalid request"));
+                return ApiResult<UserResponse>.Failure(new ArgumentException("Yêu cầu không hợp lệ"));
 
             var user = await _userManager.FindByIdAsync(id.ToString());
             if (user == null)
-                return ApiResult<UserResponse>.Failure(new InvalidOperationException("User not found"));
+                return ApiResult<UserResponse>.Failure(new InvalidOperationException("Không tìm thấy người dùng"));
 
             return await _unitOfWork.ExecuteTransactionAsync(async () =>
             {
@@ -482,15 +482,15 @@ namespace Services.Implementations
         public async Task<ApiResult<UserResponse>> UpdateCurrentUserAsync(UpdateUserRequest req)
         {
             if (req == null)
-                return ApiResult<UserResponse>.Failure(new ArgumentException("Invalid request"));
+                return ApiResult<UserResponse>.Failure(new ArgumentException("Yêu cầu không hợp lệ"));
 
             var uid = _currentUserService.GetUserId();
             if (uid == null)
-                return ApiResult<UserResponse>.Failure(new InvalidOperationException("User not found"));
+                return ApiResult<UserResponse>.Failure(new InvalidOperationException("Không tìm thấy người dùng"));
 
             var user = await _userManager.FindByIdAsync(uid.ToString());
             if (user == null)
-                return ApiResult<UserResponse>.Failure(new InvalidOperationException("User not found"));
+                return ApiResult<UserResponse>.Failure(new InvalidOperationException("Không tìm thấy người dùng"));
 
             return await _unitOfWork.ExecuteTransactionAsync(async () =>
             {
@@ -515,13 +515,13 @@ namespace Services.Implementations
         {
             var user = await _userManager.FindByIdAsync(id.ToString());
             if (user == null)
-                return ApiResult<UserResponse>.Failure(new InvalidOperationException("User not found"));
+                return ApiResult<UserResponse>.Failure(new InvalidOperationException("Không tìm thấy người dùng"));
 
             var res = await _userManager.SetLockoutAsync(user, enable, until);
             if (!res.Succeeded)
                 return ApiResult<UserResponse>.Failure(new InvalidOperationException(res.ErrorMessage));
 
-            string message = enable ? "User locked successfully" : "User unlocked successfully";
+            string message = enable ? "Khóa tài khoản thành công" : "Mở khóa tài khoản thành công";
             return ApiResult<UserResponse>.Success(await UserMappings.ToUserResponseAsync(user, _userManager), message);
         }
 
@@ -541,7 +541,7 @@ namespace Services.Implementations
                 {
                     var user = await _userManager.FindByIdAsync(id.ToString());
                     if (user == null)
-                        return ApiResult<object>.Failure(new InvalidOperationException($"User {id} not found"));
+                        return ApiResult<object>.Failure(new InvalidOperationException($"Không tìm thấy người dùng {id}"));
 
                     var del = await _userManager.DeleteAsync(user);
                     if (!del.Succeeded)
@@ -553,10 +553,10 @@ namespace Services.Implementations
         public async Task<ApiResult<PagedList<UserDetailsDTO>>> GetUsersAsync(int page, int size)
         {
             if (page < 1 || size < 1)
-                return ApiResult<PagedList<UserDetailsDTO>>.Failure(new ArgumentException("Invalid pagination parameters"));
+                return ApiResult<PagedList<UserDetailsDTO>>.Failure(new ArgumentException("Tham số phân trang không hợp lệ"));
 
             var list = await _userRepository.GetUserDetailsAsync(page, size);
-            return ApiResult<PagedList<UserDetailsDTO>>.Success(list, $"Retrieved {list.Count} users from page {page}");
+            return ApiResult<PagedList<UserDetailsDTO>>.Success(list, $"Lấy {list.Count} người dùng từ trang {page}");
         }
 
     }

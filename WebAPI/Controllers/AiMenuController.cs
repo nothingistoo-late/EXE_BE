@@ -51,7 +51,7 @@ namespace WebAPI.Controllers
                 return StatusCode(500, new ApiResult<GenerateRecipeResponse>
                 {
                     IsSuccess = false,
-                    Message = "An error occurred while generating recipes",
+                    Message = "Đã xảy ra lỗi khi tạo công thức nấu ăn",
                     Exception = ex
                 });
             }
@@ -87,7 +87,7 @@ namespace WebAPI.Controllers
                 return StatusCode(500, new ApiResult<GetUserRecipesResponse>
                 {
                     IsSuccess = false,
-                    Message = "An error occurred while retrieving recipes",
+                    Message = "Đã xảy ra lỗi khi lấy công thức",
                     Exception = ex
                 });
             }
@@ -118,7 +118,7 @@ namespace WebAPI.Controllers
                 return StatusCode(500, new ApiResult<AiRecipeResponse>
                 {
                     IsSuccess = false,
-                    Message = "An error occurred while retrieving the recipe",
+                    Message = "Đã xảy ra lỗi khi lấy công thức",
                     Exception = ex
                 });
             }
@@ -139,7 +139,7 @@ namespace WebAPI.Controllers
                     return BadRequest(new ApiResult<List<AiRecipeResponse>>
                     {
                         IsSuccess = false,
-                        Message = "Count must be between 1 and 20"
+                        Message = "Số lượng phải nằm trong khoảng từ 1 đến 20"
                     });
                 }
 
@@ -158,7 +158,7 @@ namespace WebAPI.Controllers
                 return StatusCode(500, new ApiResult<List<AiRecipeResponse>>
                 {
                     IsSuccess = false,
-                    Message = "An error occurred while retrieving recent recipes",
+                    Message = "Đã xảy ra lỗi khi lấy công thức gần đây",
                     Exception = ex
                 });
             }
@@ -182,7 +182,7 @@ namespace WebAPI.Controllers
                     return BadRequest(new ApiResult<List<AiRecipeResponse>>
                     {
                         IsSuccess = false,
-                        Message = "At least one vegetable is required"
+                        Message = "Cần ít nhất một loại rau củ"
                     });
                 }
 
@@ -191,7 +191,7 @@ namespace WebAPI.Controllers
                     return BadRequest(new ApiResult<List<AiRecipeResponse>>
                     {
                         IsSuccess = false,
-                        Message = "Count must be between 1 and 20"
+                        Message = "Số lượng phải nằm trong khoảng từ 1 đến 20"
                     });
                 }
 
@@ -210,7 +210,7 @@ namespace WebAPI.Controllers
                 return StatusCode(500, new ApiResult<List<AiRecipeResponse>>
                 {
                     IsSuccess = false,
-                    Message = "An error occurred while retrieving recipes by vegetables",
+                    Message = "Đã xảy ra lỗi khi lấy công thức theo rau củ",
                     Exception = ex
                 });
             }
@@ -241,7 +241,7 @@ namespace WebAPI.Controllers
                 return StatusCode(500, new ApiResult<bool>
                 {
                     IsSuccess = false,
-                    Message = "An error occurred while deleting the recipe",
+                    Message = "Đã xảy ra lỗi khi xóa công thức",
                     Exception = ex
                 });
             }
@@ -271,7 +271,7 @@ namespace WebAPI.Controllers
                 return StatusCode(500, new ApiResult<int>
                 {
                     IsSuccess = false,
-                    Message = "An error occurred while retrieving recipe count",
+                    Message = "Đã xảy ra lỗi khi lấy số lượng công thức",
                     Exception = ex
                 });
             }

@@ -576,13 +576,13 @@ namespace Services.Implementations
             {
                 var order = await _unitOfWork.OrderRepository.GetByIdAsync(orderId, includes: o => o.OrderDetails);
                 if (order == null)
-                    return ApiResult<PaymentLinkResponse>.Failure(new Exception("Order not found"));
+                    return ApiResult<PaymentLinkResponse>.Failure(new Exception("Không tìm thấy đơn hàng"));
 
                 if (order.PaymentMethod != PaymentMethod.PayOS)
-                    return ApiResult<PaymentLinkResponse>.Failure(new Exception("Order is not using PayOS payment method"));
+                    return ApiResult<PaymentLinkResponse>.Failure(new Exception("Đơn hàng không sử dụng phương thức thanh toán PayOS"));
 
                 if (order.IsPaid)
-                    return ApiResult<PaymentLinkResponse>.Failure(new Exception("Order is already paid"));
+                    return ApiResult<PaymentLinkResponse>.Failure(new Exception("Đơn hàng đã được thanh toán"));
 
                 // Ensure product names are available even if BoxType navigation isn't included
                 var boxTypeIds = order.OrderDetails.Select(od => od.BoxTypeId).Distinct().ToList();
@@ -637,7 +637,7 @@ namespace Services.Implementations
                     .FirstOrDefaultAsync(o => o.PayOSPaymentLinkId == paymentLinkId);
 
                 if (order == null)
-                    return ApiResult<bool>.Failure(new Exception("Order not found"));
+                    return ApiResult<bool>.Failure(new Exception("Không tìm thấy đơn hàng"));
 
                 // Update order status to paid
                 order.IsPaid = true;
@@ -709,7 +709,7 @@ namespace Services.Implementations
                     _logger.LogWarning("No recent orders found without PayOSOrderCode");
                 }
                 
-                return ApiResult<OrderResponse>.Failure(new Exception($"No order found with PayOSOrderCode: {orderCode}"));
+                return ApiResult<OrderResponse>.Failure(new Exception($"Không tìm thấy đơn hàng với PayOSOrderCode: {orderCode}"));
             }
             catch (Exception ex)
             {
@@ -788,7 +788,7 @@ namespace Services.Implementations
             {
                 var order = await _unitOfWork.OrderRepository.GetByIdAsync(orderId);
                 if (order == null)
-                    return ApiResult<OrderResponse>.Failure(new Exception("Order not found"));
+                    return ApiResult<OrderResponse>.Failure(new Exception("Không tìm thấy đơn hàng"));
 
                 _logger.LogInformation("Debug Order {OrderId}: PayOSOrderCode='{PayOSOrderCode}', PaymentMethod={PaymentMethod}, Status={Status}, IsPaid={IsPaid}", 
                     order.Id, order.PayOSOrderCode ?? "NULL", order.PaymentMethod, order.Status, order.IsPaid);
@@ -822,7 +822,7 @@ namespace Services.Implementations
                     _logger.LogError("3. Webhook is being called with wrong OrderCode");
                     _logger.LogError("4. Database transaction was not committed");
                     
-                    return ApiResult<bool>.Failure(new Exception($"Order not found with order code: {orderCode}"));
+                    return ApiResult<bool>.Failure(new Exception($"Không tìm thấy đơn hàng với mã: {orderCode}"));
                 }
                 
                 _logger.LogInformation("Found order {OrderId} with PayOSOrderCode: {OrderCode}", order.Id, orderCode);

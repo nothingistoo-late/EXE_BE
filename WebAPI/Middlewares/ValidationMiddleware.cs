@@ -36,7 +36,7 @@ namespace WebAPI.Middlewares
                 var response = new ApiResult<object>
                 {
                     IsSuccess = false,
-                    Message = "Validation failed",
+                    Message = "Xác thực dữ liệu thất bại",
                     Data = errors
                 };
 

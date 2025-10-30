@@ -46,20 +46,20 @@ namespace Services.Implementations
                 var currentUserId = _currentUserService.GetUserId();
                 if (currentUserId == null)
                 {
-                    return ApiResult<GenerateRecipeResponse>.Failure(new UnauthorizedAccessException("User not authenticated"));
+                    return ApiResult<GenerateRecipeResponse>.Failure(new UnauthorizedAccessException("Người dùng chưa xác thực"));
                 }
 
                 // Validate vegetables
                 if (!request.Vegetables.Any())
                 {
-                    return ApiResult<GenerateRecipeResponse>.Failure(new ArgumentException("At least one vegetable is required"));
+                    return ApiResult<GenerateRecipeResponse>.Failure(new ArgumentException("Cần ít nhất một loại rau củ"));
                 }
 
                 // Generate recipe using AI
                 var aiRecipe = await GenerateRecipeWithAIAsync(request, currentUserId.Value);
                 if (aiRecipe == null)
                 {
-                    return ApiResult<GenerateRecipeResponse>.Failure(new Exception("Failed to generate recipe"));
+                    return ApiResult<GenerateRecipeResponse>.Failure(new Exception("Tạo công thức thất bại"));
                 }
 
                 // Tìm ảnh thật cho món ăn
@@ -94,7 +94,7 @@ namespace Services.Implementations
                 var currentUserId = _currentUserService.GetUserId();
                 if (currentUserId == null)
                 {
-                    return ApiResult<GetUserRecipesResponse>.Failure(new UnauthorizedAccessException("User not authenticated"));
+                    return ApiResult<GetUserRecipesResponse>.Failure(new UnauthorizedAccessException("Người dùng chưa xác thực"));
                 }
 
                 var recipes = await _aiRecipeRepository.GetUserRecipesAsync(
@@ -122,13 +122,13 @@ namespace Services.Implementations
                 var currentUserId = _currentUserService.GetUserId();
                 if (currentUserId == null)
                 {
-                    return ApiResult<AiRecipeResponse>.Failure(new UnauthorizedAccessException("User not authenticated"));
+                    return ApiResult<AiRecipeResponse>.Failure(new UnauthorizedAccessException("Người dùng chưa xác thực"));
                 }
 
                 var recipe = await _aiRecipeRepository.GetByIdAsync(recipeId);
                 if (recipe == null || recipe.UserId != currentUserId.Value || recipe.IsDeleted)
                 {
-                    return ApiResult<AiRecipeResponse>.Failure(new KeyNotFoundException("Recipe not found"));
+                    return ApiResult<AiRecipeResponse>.Failure(new KeyNotFoundException("Không tìm thấy công thức"));
                 }
 
                 return ApiResult<AiRecipeResponse>.Success(_mapper.Map<AiRecipeResponse>(recipe), "Recipe retrieved successfully");
@@ -147,7 +147,7 @@ namespace Services.Implementations
                 var currentUserId = _currentUserService.GetUserId();
                 if (currentUserId == null)
                 {
-                    return ApiResult<List<AiRecipeResponse>>.Failure(new UnauthorizedAccessException("User not authenticated"));
+                    return ApiResult<List<AiRecipeResponse>>.Failure(new UnauthorizedAccessException("Người dùng chưa xác thực"));
                 }
 
                 var recipes = await _aiRecipeRepository.GetRecentRecipesAsync(currentUserId.Value, count);
@@ -187,13 +187,13 @@ namespace Services.Implementations
                 var currentUserId = _currentUserService.GetUserId();
                 if (currentUserId == null)
                 {
-                    return ApiResult<bool>.Failure(new UnauthorizedAccessException("User not authenticated"));
+                    return ApiResult<bool>.Failure(new UnauthorizedAccessException("Người dùng chưa xác thực"));
                 }
 
                 var recipe = await _aiRecipeRepository.GetByIdAsync(recipeId);
                 if (recipe == null || recipe.UserId != currentUserId.Value || recipe.IsDeleted)
                 {
-                    return ApiResult<bool>.Failure(new KeyNotFoundException("Recipe not found"));
+                    return ApiResult<bool>.Failure(new KeyNotFoundException("Không tìm thấy công thức"));
                 }
 
                 var result = await DeleteAsync(recipeId);
@@ -213,7 +213,7 @@ namespace Services.Implementations
                 var currentUserId = _currentUserService.GetUserId();
                 if (currentUserId == null)
                 {
-                    return ApiResult<int>.Failure(new UnauthorizedAccessException("User not authenticated"));
+                    return ApiResult<int>.Failure(new UnauthorizedAccessException("Người dùng chưa xác thực"));
                 }
 
                 var count = await _aiRecipeRepository.GetUserRecipeCountAsync(currentUserId.Value);
@@ -381,14 +381,14 @@ Vui lòng chỉ phản hồi với JSON object, không có thêm văn bản ho�
                 // Validate ingredients
                 if (!request.Ingredients.Any())
                 {
-                    return ApiResult<AdminGenerateRecipeResponse>.Failure(new ArgumentException("At least one ingredient is required"));
+                    return ApiResult<AdminGenerateRecipeResponse>.Failure(new ArgumentException("Cần ít nhất một nguyên liệu"));
                 }
 
                 // Get current admin user ID
                 var currentUserId = _currentUserService.GetUserId();
                 if (currentUserId == null)
                 {
-                    return ApiResult<AdminGenerateRecipeResponse>.Failure(new UnauthorizedAccessException("Admin not authenticated"));
+                    return ApiResult<AdminGenerateRecipeResponse>.Failure(new UnauthorizedAccessException("Quản trị viên chưa xác thực"));
                 }
 
                 // Create a GenerateRecipeRequest from AdminGenerateRecipeRequest
@@ -403,7 +403,7 @@ Vui lòng chỉ phản hồi với JSON object, không có thêm văn bản ho�
                 var aiRecipe = await GenerateRecipeWithAIAsync(generateRequest, currentUserId.Value);
                 if (aiRecipe == null)
                 {
-                    return ApiResult<AdminGenerateRecipeResponse>.Failure(new Exception("Failed to generate recipe"));
+                    return ApiResult<AdminGenerateRecipeResponse>.Failure(new Exception("Tạo công thức thất bại"));
                 }
 
                 // Set the generated date to the requested date
@@ -444,7 +444,7 @@ Vui lòng chỉ phản hồi với JSON object, không có thêm văn bản ho�
                 
                 if (recipe == null)
                 {
-                    return ApiResult<UserRecipeResponse>.Failure(new KeyNotFoundException("No recipe found for the specified date"));
+                    return ApiResult<UserRecipeResponse>.Failure(new KeyNotFoundException("Không tìm thấy công thức cho ngày đã chọn"));
                 }
 
                 // Map AiRecipeResponse to UserRecipeResponse

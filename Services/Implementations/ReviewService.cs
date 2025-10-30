@@ -28,14 +28,14 @@ namespace Services.Implementations
                 var order = await _unitOfWork.OrderRepository.GetByIdAsync(request.OrderId);
                 if (order == null)
                 {
-                    return ApiResult<ReviewResponse>.Failure(new ArgumentException("Order not found"));
+                    return ApiResult<ReviewResponse>.Failure(new ArgumentException("Không tìm thấy đơn hàng"));
                 }
 
                 // Check if review already exists for this order
                 var existingReview = await _unitOfWork.ReviewRepository.GetByOrderIdAsync(request.OrderId);
                 if (existingReview != null)
                 {
-                    return ApiResult<ReviewResponse>.Failure(new InvalidOperationException("Review already exists for this order"));
+                    return ApiResult<ReviewResponse>.Failure(new InvalidOperationException("Đánh giá cho đơn hàng này đã tồn tại"));
                 }
 
                 var review = new Review
@@ -60,11 +60,11 @@ namespace Services.Implementations
                     UpdatedAt = review.UpdatedAt
                 };
 
-                return ApiResult<ReviewResponse>.Success(response, "Review created successfully");
+                return ApiResult<ReviewResponse>.Success(response, "Tạo đánh giá thành công");
             }
             catch (Exception ex)
             {
-                return ApiResult<ReviewResponse>.Failure(new Exception($"Error creating review: {ex.Message}"));
+                return ApiResult<ReviewResponse>.Failure(new Exception($"Lỗi tạo đánh giá: {ex.Message}"));
             }
         }
 
@@ -75,7 +75,7 @@ namespace Services.Implementations
                 var review = await _unitOfWork.ReviewRepository.GetByIdAsync(request.Id);
                 if (review == null || review.IsDeleted)
                 {
-                    return ApiResult<ReviewResponse>.Failure(new ArgumentException("Review not found"));
+                    return ApiResult<ReviewResponse>.Failure(new ArgumentException("Không tìm thấy đánh giá"));
                 }
 
                 review.ServiceQualityRating = request.ServiceQualityRating;
@@ -95,11 +95,11 @@ namespace Services.Implementations
                     UpdatedAt = review.UpdatedAt
                 };
 
-                return ApiResult<ReviewResponse>.Success(response, "Review updated successfully");
+                return ApiResult<ReviewResponse>.Success(response, "Cập nhật đánh giá thành công");
             }
             catch (Exception ex)
             {
-                return ApiResult<ReviewResponse>.Failure(new Exception($"Error updating review: {ex.Message}"));
+                return ApiResult<ReviewResponse>.Failure(new Exception($"Lỗi cập nhật đánh giá: {ex.Message}"));
             }
         }
 
@@ -110,7 +110,7 @@ namespace Services.Implementations
                 var review = await _unitOfWork.ReviewRepository.GetByIdAsync(id);
                 if (review == null || review.IsDeleted)
                 {
-                    return ApiResult<ReviewResponse>.Failure(new ArgumentException("Review not found"));
+                    return ApiResult<ReviewResponse>.Failure(new ArgumentException("Không tìm thấy đánh giá"));
                 }
 
                 var response = new ReviewResponse
@@ -124,11 +124,11 @@ namespace Services.Implementations
                     UpdatedAt = review.UpdatedAt
                 };
 
-                return ApiResult<ReviewResponse>.Success(response, "Review retrieved successfully");
+                return ApiResult<ReviewResponse>.Success(response, "Lấy đánh giá thành công");
             }
             catch (Exception ex)
             {
-                return ApiResult<ReviewResponse>.Failure(new Exception($"Error getting review: {ex.Message}"));
+                return ApiResult<ReviewResponse>.Failure(new Exception($"Lỗi lấy đánh giá: {ex.Message}"));
             }
         }
 
@@ -139,13 +139,13 @@ namespace Services.Implementations
                 var review = await _unitOfWork.ReviewRepository.GetByIdAsync(id);
                 if (review == null || review.IsDeleted)
                 {
-                    return ApiResult<ReviewDetailResponse>.Failure(new ArgumentException("Review not found"));
+                    return ApiResult<ReviewDetailResponse>.Failure(new ArgumentException("Không tìm thấy đánh giá"));
                 }
 
                 var order = await _unitOfWork.OrderRepository.GetByIdAsync(review.OrderId);
                 if (order == null)
                 {
-                    return ApiResult<ReviewDetailResponse>.Failure(new ArgumentException("Order not found"));
+                    return ApiResult<ReviewDetailResponse>.Failure(new ArgumentException("Không tìm thấy đơn hàng"));
                 }
                 var customer = await _unitOfWork.CustomerRepository.FirstOrDefaultAsync(o=> o.UserId== order.UserId);
 
@@ -164,11 +164,11 @@ namespace Services.Implementations
                     CustomerAddress = customer.Address ?? "N/A" 
                 };
 
-                return ApiResult<ReviewDetailResponse>.Success(response, "Review detail retrieved successfully");
+                return ApiResult<ReviewDetailResponse>.Success(response, "Lấy chi tiết đánh giá thành công");
             }
             catch (Exception ex)
             {
-                return ApiResult<ReviewDetailResponse>.Failure(new Exception($"Error getting review detail: {ex.Message}"));
+                return ApiResult<ReviewDetailResponse>.Failure(new Exception($"Lỗi lấy chi tiết đánh giá: {ex.Message}"));
             }
         }
 
@@ -179,7 +179,7 @@ namespace Services.Implementations
                 var review = await _unitOfWork.ReviewRepository.GetByOrderIdAsync(orderId);
                 if (review == null)
                 {
-                    return ApiResult<ReviewResponse>.Failure(new ArgumentException("Review not found for this order"));
+                    return ApiResult<ReviewResponse>.Failure(new ArgumentException("Không tìm thấy đánh giá cho đơn hàng này"));
                 }
 
                 var response = new ReviewResponse
@@ -193,11 +193,11 @@ namespace Services.Implementations
                     UpdatedAt = review.UpdatedAt
                 };
 
-                return ApiResult<ReviewResponse>.Success(response, "Review retrieved successfully");
+                return ApiResult<ReviewResponse>.Success(response, "Lấy đánh giá thành công");
             }
             catch (Exception ex)
             {
-                return ApiResult<ReviewResponse>.Failure(new Exception($"Error getting review: {ex.Message}"));
+                return ApiResult<ReviewResponse>.Failure(new Exception($"Lỗi lấy đánh giá: {ex.Message}"));
             }
         }
 
@@ -221,11 +221,11 @@ namespace Services.Implementations
 
                 var pagedList = new PagedList<ReviewResponse>(reviewResponses, totalCount, pageNumber, pageSize);
 
-                return ApiResult<PagedList<ReviewResponse>>.Success(pagedList, "Reviews retrieved successfully");
+                return ApiResult<PagedList<ReviewResponse>>.Success(pagedList, "Lấy danh sách đánh giá thành công");
             }
             catch (Exception ex)
             {
-                return ApiResult<PagedList<ReviewResponse>>.Failure(new Exception($"Error getting reviews: {ex.Message}"));
+                return ApiResult<PagedList<ReviewResponse>>.Failure(new Exception($"Lỗi lấy danh sách đánh giá: {ex.Message}"));
             }
         }
 
@@ -246,11 +246,11 @@ namespace Services.Implementations
                     UpdatedAt = r.UpdatedAt
                 }).ToList();
 
-                return ApiResult<List<ReviewResponse>>.Success(reviewResponses, "Reviews retrieved successfully");
+                return ApiResult<List<ReviewResponse>>.Success(reviewResponses, "Lấy danh sách đánh giá thành công");
             }
             catch (Exception ex)
             {
-                return ApiResult<List<ReviewResponse>>.Failure(new Exception($"Error getting reviews by order: {ex.Message}"));
+                return ApiResult<List<ReviewResponse>>.Failure(new Exception($"Lỗi lấy đánh giá theo đơn hàng: {ex.Message}"));
             }
         }
 
@@ -269,11 +269,11 @@ namespace Services.Implementations
                     TotalReviews = totalReviews
                 };
 
-                return ApiResult<object>.Success(statistics, "Statistics retrieved successfully");
+                return ApiResult<object>.Success(statistics, "Lấy thống kê thành công");
             }
             catch (Exception ex)
             {
-                return ApiResult<object>.Failure(new Exception($"Error getting review statistics: {ex.Message}"));
+                return ApiResult<object>.Failure(new Exception($"Lỗi lấy thống kê đánh giá: {ex.Message}"));
             }
         }
 
@@ -285,7 +285,7 @@ namespace Services.Implementations
                 var boxType = await _unitOfWork.BoxTypeRepository.GetByIdAsync(boxTypeId);
                 if (boxType == null)
                 {
-                    return ApiResult<object>.Failure(new ArgumentException("Box type not found"));
+                    return ApiResult<object>.Failure(new ArgumentException("Không tìm thấy loại hộp"));
                 }
 
                 var averageServiceRating = await _unitOfWork.ReviewRepository.GetAverageServiceRatingByBoxTypeAsync(boxTypeId);
@@ -301,11 +301,11 @@ namespace Services.Implementations
                     TotalReviews = totalReviews
                 };
 
-                return ApiResult<object>.Success(statistics, "Box type review statistics retrieved successfully");
+                return ApiResult<object>.Success(statistics, "Lấy thống kê đánh giá theo loại hộp thành công");
             }
             catch (Exception ex)
             {
-                return ApiResult<object>.Failure(new Exception($"Error getting box type review statistics: {ex.Message}"));
+                return ApiResult<object>.Failure(new Exception($"Lỗi lấy thống kê đánh giá theo loại hộp: {ex.Message}"));
             }
         }
 
@@ -316,16 +316,16 @@ namespace Services.Implementations
                 var review = await _unitOfWork.ReviewRepository.GetByIdAsync(id);
                 if (review == null || review.IsDeleted)
                 {
-                    return ApiResult<bool>.Failure(new ArgumentException("Review not found"));
+                    return ApiResult<bool>.Failure(new ArgumentException("Không tìm thấy đánh giá"));
                 }
 
                 await DeleteAsync(id);
 
-                return ApiResult<bool>.Success(true, "Review deleted successfully");
+                return ApiResult<bool>.Success(true, "Xóa đánh giá thành công");
             }
             catch (Exception ex)
             {
-                return ApiResult<bool>.Failure(new Exception($"Error deleting review: {ex.Message}"));
+                return ApiResult<bool>.Failure(new Exception($"Lỗi xóa đánh giá: {ex.Message}"));
             }
         }
     }
