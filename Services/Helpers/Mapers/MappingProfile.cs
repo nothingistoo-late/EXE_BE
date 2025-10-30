@@ -87,8 +87,7 @@ namespace Services.Helpers.Mappers
             //        .ForMember(dest => dest.Note, opt => opt.MapFrom(src => src.Note));
 
            CreateMap<Customer, MyProfileResponse>()
-          .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.User.FirstName))
-          .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.User.LastName))
+          .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.User.FullName))
           .ForMember(dest => dest.Phone, opt => opt.MapFrom(src => src.User.PhoneNumber))
           .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email))
           .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.User.Gender))
