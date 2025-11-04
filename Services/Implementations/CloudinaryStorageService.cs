@@ -40,62 +40,63 @@ namespace Services.Implementations
 
             try
             {
-                // Optimize image before upload (only if file is large enough to benefit)
                 byte[] optimizedImageBytes;
-                var shouldOptimize = file.Length > 50000; // Only optimize if file > 50KB
+                var fileSize = file.Length;
+                var shouldOptimize = fileSize > 50000; // Only optimize if file > 50KB
                 
                 if (shouldOptimize)
                 {
-                    using (var originalStream = file.OpenReadStream())
-                    using (var image = await Image.LoadAsync(originalStream, cancellationToken))
-                    {
-                        var originalWidth = image.Width;
-                        var originalHeight = image.Height;
-                        
-                        // Resize if image is too large (max 800x800 for avatars)
-                        var maxDimension = 800;
-                        if (image.Width > maxDimension || image.Height > maxDimension)
-                        {
-                            var ratio = Math.Min((double)maxDimension / image.Width, (double)maxDimension / image.Height);
-                            var newWidth = (int)(image.Width * ratio);
-                            var newHeight = (int)(image.Height * ratio);
-                            
-                            image.Mutate(x => x.Resize(new ResizeOptions
-                            {
-                                Size = new Size(newWidth, newHeight),
-                                Mode = ResizeMode.Max
-                            }));
-                            
-                            _logger.LogInformation("Image resized from {OriginalWidth}x{OriginalHeight} to {NewWidth}x{NewHeight}", 
-                                originalWidth, originalHeight, newWidth, newHeight);
-                        }
-
-                        // Save optimized image to memory stream as JPEG with quality 85
-                        using (var memoryStream = new MemoryStream())
-                        {
-                            await image.SaveAsJpegAsync(memoryStream, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder
-                            {
-                                Quality = 85
-                            }, cancellationToken);
-                            optimizedImageBytes = memoryStream.ToArray();
-                        }
-                    }
+                    var optimizationStartTime = DateTime.UtcNow;
                     
-                    _logger.LogInformation("Image optimized: Original size: {OriginalSize} bytes, Optimized size: {OptimizedSize} bytes", 
-                        file.Length, optimizedImageBytes.Length);
+                    // Read file stream once and process
+                    await using var originalStream = file.OpenReadStream();
+                    using var image = await Image.LoadAsync(originalStream, cancellationToken);
+                    
+                    var originalWidth = image.Width;
+                    var originalHeight = image.Height;
+                    
+                    // Resize if image is too large (max 800x800 for avatars)
+                    var maxDimension = 800;
+                    if (image.Width > maxDimension || image.Height > maxDimension)
+                    {
+                        var ratio = Math.Min((double)maxDimension / image.Width, (double)maxDimension / image.Height);
+                        var newWidth = (int)(image.Width * ratio);
+                        var newHeight = (int)(image.Height * ratio);
+                        
+                        image.Mutate(x => x.Resize(new ResizeOptions
+                        {
+                            Size = new SixLabors.ImageSharp.Size(newWidth, newHeight),
+                            Mode = ResizeMode.Max
+                        }));
+                        
+                        _logger.LogInformation("Image resized from {OriginalWidth}x{OriginalHeight} to {NewWidth}x{NewHeight}", 
+                            originalWidth, originalHeight, newWidth, newHeight);
+                    }
+
+                    // Save optimized image directly to memory stream as JPEG with quality 85
+                    using var memoryStream = new MemoryStream();
+                    await image.SaveAsJpegAsync(memoryStream, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder
+                    {
+                        Quality = 85
+                    }, cancellationToken);
+                    
+                    optimizedImageBytes = memoryStream.ToArray();
+                    
+                    var optimizationTime = (DateTime.UtcNow - optimizationStartTime).TotalMilliseconds;
+                    _logger.LogInformation("Image optimized in {OptimizationMs}ms: Original size: {OriginalSize} bytes, Optimized size: {OptimizedSize} bytes", 
+                        optimizationTime, fileSize, optimizedImageBytes.Length);
                 }
                 else
                 {
-                    // For small files, use original file stream directly
+                    // For small files, read directly without processing
                     await using var stream = file.OpenReadStream();
-                    using (var memoryStream = new MemoryStream())
-                    {
-                        await stream.CopyToAsync(memoryStream, cancellationToken);
-                        optimizedImageBytes = memoryStream.ToArray();
-                    }
+                    using var memoryStream = new MemoryStream((int)fileSize + 1024); // Pre-allocate capacity
+                    await stream.CopyToAsync(memoryStream, cancellationToken);
+                    optimizedImageBytes = memoryStream.ToArray();
                 }
 
                 // Upload optimized image to Cloudinary
+                var uploadStartTime = DateTime.UtcNow;
                 var publicId = string.IsNullOrWhiteSpace(fileName) ? Guid.NewGuid().ToString("N") : fileName;
                 var uploadParams = new ImageUploadParams
                 {
@@ -112,17 +113,25 @@ namespace Services.Implementations
 
                 var uploadResult = await _cloudinary.UploadAsync(uploadParams, cancellationToken);
                 
-                var elapsedTime = (DateTime.UtcNow - startTime).TotalMilliseconds;
+                var uploadTime = (DateTime.UtcNow - uploadStartTime).TotalMilliseconds;
+                var totalTime = (DateTime.UtcNow - startTime).TotalMilliseconds;
                 
                 if (uploadResult.StatusCode is System.Net.HttpStatusCode.OK or System.Net.HttpStatusCode.Created)
                 {
                     var url = uploadResult.SecureUrl?.ToString() ?? uploadResult.Url?.ToString() ?? string.Empty;
-                    _logger.LogInformation("Image uploaded successfully in {ElapsedMs}ms: {Url}", elapsedTime, url);
+                    _logger.LogInformation("Image uploaded successfully - Total: {TotalMs}ms (Upload: {UploadMs}ms), Size: {Size} bytes, URL: {Url}", 
+                        totalTime, uploadTime, optimizedImageBytes.Length, url);
                     return url;
                 }
                 
-                _logger.LogError("Cloudinary upload failed after {ElapsedMs}ms: {Error}", elapsedTime, uploadResult.Error?.Message);
+                _logger.LogError("Cloudinary upload failed after {ElapsedMs}ms: {Error}", totalTime, uploadResult.Error?.Message);
                 throw new InvalidOperationException($"Cloudinary upload failed: {uploadResult.Error?.Message}");
+            }
+            catch (OperationCanceledException)
+            {
+                var elapsedTime = (DateTime.UtcNow - startTime).TotalMilliseconds;
+                _logger.LogWarning("Image upload cancelled after {ElapsedMs}ms: {FileName}", elapsedTime, file.FileName);
+                throw;
             }
             catch (Exception ex)
             {

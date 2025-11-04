@@ -94,12 +94,12 @@ namespace WebAPI.Controllers
         /// </summary>
         [HttpPut("me")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UpdateMyProfile([FromForm] UpdateMyProfileRequest request, IFormFile? avatar)
+        public async Task<IActionResult> UpdateMyProfile([FromForm] UpdateMyProfileRequest request, IFormFile? avatar, CancellationToken cancellationToken = default)
         {
             // Nếu có ảnh upload thì lưu vào wwwroot/uploads/avatars và gán ImgURL
             if (avatar != null && avatar.Length > 0)
             {
-                var uploadedUrl = await _imageStorage.UploadAsync(avatar);
+                var uploadedUrl = await _imageStorage.UploadAsync(avatar, cancellationToken: cancellationToken);
                 request.ImgURL = uploadedUrl;
             }
 
