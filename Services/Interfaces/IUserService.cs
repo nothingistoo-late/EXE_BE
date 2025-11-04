@@ -16,6 +16,7 @@ namespace Services.Interfaces
         Task<ApiResult<RevokeRefreshTokenResponse>> RevokeRefreshTokenAsync(RefreshTokenRequest request);
         Task<ApiResult<CurrentUserResponse>> RefreshTokenAsync(RefreshTokenRequest request);
         Task<ApiResult<UserResponse>> LoginAsync(UserLoginRequest request);
+        Task<ApiResult<UserResponse>> GoogleLoginAsync(GoogleLoginRequest request);
         Task<ApiResult<PagedList<UserDetailsDTO>>> GetUsersAsync(int pageNumber, int pageSize);
         Task<ApiResult<UserResponse>> UpdateCurrentUserAsync(UpdateUserRequest request);
         Task<ApiResult<string>> ChangePasswordAsync(ChangePasswordRequest request);

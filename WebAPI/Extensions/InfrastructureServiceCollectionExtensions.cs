@@ -27,6 +27,7 @@ namespace WebAPI.Extensions
             services.Configure<GroqOptions>(configuration.GetSection("Groq"));
             services.Configure<DTOs.Options.PayOSOptions>(configuration.GetSection("PayOS"));
             services.Configure<DTOs.Options.CloudinaryOptions>(configuration.GetSection(DTOs.Options.CloudinaryOptions.SectionName));
+            services.Configure<DTOs.Options.GoogleOptions>(configuration.GetSection(DTOs.Options.GoogleOptions.SectionName));
 
             // 2. DbContext và CORS
             services.AddDbContext<EXE_BE>(opt =>
@@ -36,7 +37,7 @@ namespace WebAPI.Extensions
             services.AddCors(opt =>
             {
                 opt.AddPolicy("CorsPolicy", b => b
-                    .WithOrigins("https://www.vegie.site", "https://vegie.site", "http://localhost:5173")
+                    .WithOrigins("https://www.vegie.site", "https://vegie.site", "http://localhost:5173", "http://localhost:3000")
                     .AllowAnyMethod()
                     .AllowAnyHeader()
                     .AllowCredentials()
@@ -167,6 +168,8 @@ namespace WebAPI.Extensions
             services.AddScoped<IPayOSService, PayOSService>();
             services.AddScoped<IReviewService, ReviewService>();
             services.AddHttpContextAccessor();
+            // Ensure HttpClientFactory is available
+            services.AddHttpClient();
             //services.AddScoped<IHealthSurveyService, HealthSurveyService>();
             services.AddHttpClient<ChatBoxAI.Services.IGeminiService, ChatBoxAI.Services.GeminiService>();
             services.Configure<ChatBoxAI.Options.GeminiOptions>(

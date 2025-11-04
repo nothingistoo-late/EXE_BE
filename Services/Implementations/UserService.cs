@@ -1,10 +1,12 @@
 ﻿using DTOs.UserDTOs.Request;
 using DTOs.UserDTOs.Identities;
+using DTOs.Options;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Repositories;
 using Repositories.Interfaces;
 using Services.Helpers;
@@ -14,6 +16,10 @@ using Services.Interfaces.Services.Commons.User;
 using System.Text;
 using System.Text.Json;
 using UserDTOs.DTOs.Response;
+using Google.Apis.Auth;
+using BusinessObjects;
+using System.Net.Http;
+using System.Net.Http.Headers;
 
 namespace Services.Implementations
 {
@@ -30,6 +36,8 @@ namespace Services.Implementations
         private readonly IUserRepository _userRepository;
         private readonly ICurrentTime _currentTime;
         private readonly EXE_BE _context;
+        private readonly GoogleOptions _googleOptions;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         public UserService(
             UserManager<User> userManager,
@@ -41,7 +49,9 @@ namespace Services.Implementations
             IConfiguration configuration,
             IUserRepository userRepository,
             ICurrentTime currentTime,
-            EXE_BE context)
+            EXE_BE context,
+            IOptions<GoogleOptions> googleOptions,
+            IHttpClientFactory httpClientFactory)
         {
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
             _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
@@ -53,6 +63,8 @@ namespace Services.Implementations
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
             _currentTime = currentTime ?? throw new ArgumentNullException(nameof(currentTime));
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _googleOptions = googleOptions?.Value ?? throw new ArgumentNullException(nameof(googleOptions));
+            _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         }
 
         //public async Task<ApiResult<UserResponse>> RegisterAsync(UserRegisterRequest req)
@@ -285,6 +297,189 @@ namespace Services.Implementations
 
             return ApiResult<UserResponse>.Success(userResponse, "Login successful");
         }
+
+        public async Task<ApiResult<UserResponse>> GoogleLoginAsync(GoogleLoginRequest request)
+        {
+            try
+            {
+                if (request == null || string.IsNullOrWhiteSpace(request.TokenId))
+                {
+                    return ApiResult<UserResponse>.Failure(new ArgumentException("Token không hợp lệ"));
+                }
+
+                _logger.LogInformation("Google login attempt with token");
+
+                GoogleJsonWebSignature.Payload payload = null;
+                string email = null;
+                string firstName = null;
+                string lastName = null;
+
+                // Kiểm tra xem đây là ID Token hay Access Token
+                if (request.TokenId.StartsWith("ya29.") || request.TokenId.StartsWith("1//"))
+                {
+                    // Đây là Access Token - gọi Google UserInfo API
+                    _logger.LogInformation("Detected Google Access Token, fetching user info");
+                    try
+                    {
+                        var httpClient = _httpClientFactory.CreateClient();
+                        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", request.TokenId);
+                        
+                        var response = await httpClient.GetAsync("https://www.googleapis.com/oauth2/v2/userinfo");
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            var errorContent = await response.Content.ReadAsStringAsync();
+                            _logger.LogWarning("Failed to get user info from Google: {StatusCode} - {Content}", response.StatusCode, errorContent);
+                            return ApiResult<UserResponse>.Failure(new UnauthorizedAccessException("Không thể lấy thông tin từ Google token"));
+                        }
+
+                        var jsonContent = await response.Content.ReadAsStringAsync();
+                        var userInfo = JsonSerializer.Deserialize<GoogleUserInfoResponse>(jsonContent, new JsonSerializerOptions 
+                        { 
+                            PropertyNameCaseInsensitive = true 
+                        });
+
+                        if (userInfo == null || string.IsNullOrEmpty(userInfo.Email))
+                        {
+                            return ApiResult<UserResponse>.Failure(new InvalidOperationException("Không thể lấy email từ Google token"));
+                        }
+
+                        email = userInfo.Email;
+                        firstName = userInfo.GivenName;
+                        lastName = userInfo.FamilyName;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error fetching user info from Google");
+                        return ApiResult<UserResponse>.Failure(new Exception($"Lỗi khi lấy thông tin từ Google: {ex.Message}"));
+                    }
+                }
+                else
+                {
+                    // Đây là ID Token - verify như bình thường
+                    _logger.LogInformation("Detected Google ID Token, validating");
+                    try
+                    {
+                        var settings = new GoogleJsonWebSignature.ValidationSettings
+                        {
+                            Audience = new[] { _googleOptions.ClientId }
+                        };
+
+                        payload = await GoogleJsonWebSignature.ValidateAsync(request.TokenId, settings);
+                        
+                        if (string.IsNullOrEmpty(payload.Email))
+                        {
+                            return ApiResult<UserResponse>.Failure(new InvalidOperationException("Không thể lấy email từ Google token"));
+                        }
+
+                        email = payload.Email;
+                        firstName = payload.GivenName;
+                        lastName = payload.FamilyName;
+                    }
+                    catch (InvalidJwtException ex)
+                    {
+                        _logger.LogWarning(ex, "Invalid Google ID token");
+                        return ApiResult<UserResponse>.Failure(new UnauthorizedAccessException("Token Google không hợp lệ hoặc đã hết hạn"));
+                    }
+                }
+
+                // Tìm hoặc tạo user
+                var user = await _userManager.FindByEmailAsync(email);
+                var isNewUser = user == null;
+
+                if (isNewUser)
+                {
+                    // Tạo user mới
+                    user = new User
+                    {
+                        Id = Guid.NewGuid(),
+                        UserName = email,
+                        Email = email,
+                        EmailConfirmed = true, // Google email đã được xác thực
+                        FirstName = firstName ?? string.Empty,
+                        LastName = lastName ?? string.Empty,
+                        CreatedAt = _currentTime.GetVietnamTime(),
+                        CreatedBy = Guid.Empty,
+                        UpdatedAt = _currentTime.GetVietnamTime(),
+                        UpdatedBy = Guid.Empty,
+                        IsDeleted = false
+                    };
+
+                    // Tạo user với password ngẫu nhiên (sẽ không bao giờ dùng)
+                    var randomPassword = Guid.NewGuid().ToString() + "A1!";
+                    var createResult = await _userManager.CreateAsync(user, randomPassword);
+                    if (!createResult.Succeeded)
+                    {
+                        var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
+                        _logger.LogError("Failed to create Google user: {Errors}", errors);
+                        return ApiResult<UserResponse>.Failure(new InvalidOperationException($"Không thể tạo tài khoản: {errors}"));
+                    }
+
+                    // Thêm role USER
+                    await _userManager.AddToRoleAsync(user, "USER");
+
+                    // Tạo Customer record
+                    var customer = new Customer
+                    {
+                        UserId = user.Id,
+                        Address = string.Empty,
+                        CreatedAt = _currentTime.GetVietnamTime(),
+                        CreatedBy = user.Id,
+                        UpdatedAt = _currentTime.GetVietnamTime(),
+                        UpdatedBy = user.Id,
+                        IsDeleted = false
+                    };
+                    await _unitOfWork.CustomerRepository.AddAsync(customer);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    _logger.LogInformation("Created new Google user: {Email}", email);
+                }
+                else
+                {
+                    // Update thông tin từ Google nếu cần
+                    if (string.IsNullOrEmpty(user.FirstName) && !string.IsNullOrEmpty(firstName))
+                    {
+                        user.FirstName = firstName;
+                    }
+                    if (string.IsNullOrEmpty(user.LastName) && !string.IsNullOrEmpty(lastName))
+                    {
+                        user.LastName = lastName;
+                    }
+                    user.UpdatedAt = _currentTime.GetVietnamTime();
+                    await _userManager.UpdateAsync(user);
+                }
+
+                // Kiểm tra account bị khóa
+                if (await _userManager.IsLockedOutAsync(user))
+                {
+                    return ApiResult<UserResponse>.Failure(new InvalidOperationException("Tài khoản đã bị khóa"));
+                }
+
+                // Generate tokens
+                var tokenResult = await _tokenService.GenerateToken(user);
+                var refreshTokenInfo = _tokenService.GenerateRefreshToken();
+                await _userManager.SetRefreshTokenAsync(user, refreshTokenInfo);
+
+                var userResponse = await UserMappings.ToUserResponseAsync(
+                    user, _userManager, tokenResult.Data, refreshTokenInfo.Token);
+
+                var message = isNewUser ? "Đăng ký và đăng nhập thành công với Google" : "Đăng nhập thành công với Google";
+                return ApiResult<UserResponse>.Success(userResponse, message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during Google login");
+                return ApiResult<UserResponse>.Failure(new Exception($"Lỗi khi đăng nhập Google: {ex.Message}"));
+            }
+        }
+
+        private class GoogleUserInfoResponse
+        {
+            public string Email { get; set; } = string.Empty;
+            public string GivenName { get; set; } = string.Empty;
+            public string FamilyName { get; set; } = string.Empty;
+            public string Name { get; set; } = string.Empty;
+        }
+
         public async Task<ApiResult<UserResponse>> GetByIdAsync(Guid id)
         {
             var userDetails = await _userRepository.GetUserDetailsByIdAsync(id);

@@ -49,6 +49,20 @@ namespace WebAPI.Controllers
         }
 
         /// <summary>
+        /// Đăng nhập bằng Google
+        /// </summary>
+        [HttpPost("login/google")]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
+        {
+            var result = await _userService.GoogleLoginAsync(request);
+            if (!result.IsSuccess)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+
+        /// <summary>
         /// Đăng ký tài khoản (tạm thời không khả dụng)
         /// </summary>
         //[HttpPost("register")]
