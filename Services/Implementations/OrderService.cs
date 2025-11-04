@@ -44,6 +44,33 @@ namespace Services.Implementations
                 _logger.LogInformation("🛒 Starting order creation for user {UserId} with {ItemCount} items", 
                     request.UserId, request.Items?.Count ?? 0);
 
+                // Validate required fields
+                if (string.IsNullOrWhiteSpace(request.Address))
+                {
+                    _logger.LogWarning("❌ Order creation failed: Address is required");
+                    return ApiResult<OrderResponse>.Failure(new Exception("Địa chỉ giao hàng là bắt buộc"));
+                }
+
+                if (string.IsNullOrWhiteSpace(request.DeliveryTo))
+                {
+                    _logger.LogWarning("❌ Order creation failed: DeliveryTo is required");
+                    return ApiResult<OrderResponse>.Failure(new Exception("Tên người nhận là bắt buộc"));
+                }
+
+                if (string.IsNullOrWhiteSpace(request.PhoneNumber))
+                {
+                    _logger.LogWarning("❌ Order creation failed: PhoneNumber is required");
+                    return ApiResult<OrderResponse>.Failure(new Exception("Số điện thoại là bắt buộc"));
+                }
+
+                // Validate phone number format (Vietnamese phone number)
+                var phoneRegex = new System.Text.RegularExpressions.Regex(@"^(0|\+84)[1-9][0-9]{8,9}$");
+                if (!phoneRegex.IsMatch(request.PhoneNumber.Trim()))
+                {
+                    _logger.LogWarning("❌ Order creation failed: Invalid phone number format: {PhoneNumber}", request.PhoneNumber);
+                    return ApiResult<OrderResponse>.Failure(new Exception("Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại theo định dạng: 0912345678 hoặc +84912345678"));
+                }
+
                 if (request.Items == null || !request.Items.Any())
                 {
                     _logger.LogWarning("❌ Order creation failed: No items provided for user {UserId}", request.UserId);
@@ -67,11 +94,11 @@ namespace Services.Implementations
                         Status = OrderStatus.Pending,
                         DeliveryMethod = request.DeliveryMethod,
                         PaymentMethod = request.PaymentMethod,
-                        Address = request.Address,
-                        DeliveryTo = request.DeliveryTo,
-                        PhoneNumber = request.PhoneNumber,
-                        AllergyNote = request.AllergyNote,
-                        PreferenceNote = request.PreferenceNote,
+                        Address = request.Address.Trim(),
+                        DeliveryTo = request.DeliveryTo.Trim(),
+                        PhoneNumber = request.PhoneNumber.Trim(),
+                        AllergyNote = request.AllergyNote?.Trim(),
+                        PreferenceNote = request.PreferenceNote?.Trim(),
                         OrderDetails = new List<OrderDetail>(),
                         CreatedAt = _currentTime.GetVietnamTime(),
                         UpdatedAt = _currentTime.GetVietnamTime(),
@@ -935,6 +962,33 @@ namespace Services.Implementations
                 _logger.LogInformation("📦 Starting weekly package creation for user {UserId} with {ItemCount} items", 
                     request.UserId, request.Items?.Count ?? 0);
 
+                // Validate required fields
+                if (string.IsNullOrWhiteSpace(request.Address))
+                {
+                    _logger.LogWarning("❌ Weekly package creation failed: Address is required");
+                    return ApiResult<WeeklyPackageResponse>.Failure(new Exception("Địa chỉ giao hàng là bắt buộc"));
+                }
+
+                if (string.IsNullOrWhiteSpace(request.DeliveryTo))
+                {
+                    _logger.LogWarning("❌ Weekly package creation failed: DeliveryTo is required");
+                    return ApiResult<WeeklyPackageResponse>.Failure(new Exception("Tên người nhận là bắt buộc"));
+                }
+
+                if (string.IsNullOrWhiteSpace(request.PhoneNumber))
+                {
+                    _logger.LogWarning("❌ Weekly package creation failed: PhoneNumber is required");
+                    return ApiResult<WeeklyPackageResponse>.Failure(new Exception("Số điện thoại là bắt buộc"));
+                }
+
+                // Validate phone number format (Vietnamese phone number)
+                var phoneRegex = new System.Text.RegularExpressions.Regex(@"^(0|\+84)[1-9][0-9]{8,9}$");
+                if (!phoneRegex.IsMatch(request.PhoneNumber.Trim()))
+                {
+                    _logger.LogWarning("❌ Weekly package creation failed: Invalid phone number format: {PhoneNumber}", request.PhoneNumber);
+                    return ApiResult<WeeklyPackageResponse>.Failure(new Exception("Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại theo định dạng: 0912345678 hoặc +84912345678"));
+                }
+
                 // Validate request
                 if (request.Items == null || !request.Items.Any())
                 {
@@ -1078,11 +1132,11 @@ namespace Services.Implementations
                     Status = OrderStatus.Pending,
                     DeliveryMethod = request.DeliveryMethod,
                     PaymentMethod = request.PaymentMethod,
-                    Address = request.Address,
-                    DeliveryTo = request.DeliveryTo,
-                    PhoneNumber = request.PhoneNumber,
-                    AllergyNote = request.AllergyNote,
-                    PreferenceNote = request.PreferenceNote,
+                    Address = request.Address.Trim(),
+                    DeliveryTo = request.DeliveryTo.Trim(),
+                    PhoneNumber = request.PhoneNumber.Trim(),
+                    AllergyNote = request.AllergyNote?.Trim(),
+                    PreferenceNote = request.PreferenceNote?.Trim(),
                     OrderDetails = new List<OrderDetail>(),
                     CreatedAt = _currentTime.GetVietnamTime(),
                     UpdatedAt = _currentTime.GetVietnamTime(),

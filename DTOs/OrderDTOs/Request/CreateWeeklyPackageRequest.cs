@@ -9,40 +9,42 @@ namespace DTOs.OrderDTOs.Request
     /// </summary>
     public class CreateWeeklyPackageRequest
     {
-        [Required]
+        [Required(ErrorMessage = "UserId là bắt buộc")]
         public Guid UserId { get; set; }
         
-        [Required]
+        [Required(ErrorMessage = "Items là bắt buộc")]
+        [MinLength(1, ErrorMessage = "Đơn đặt hàng phải có ít nhất 1 sản phẩm")]
         public List<CreateOrderDetailRequest> Items { get; set; } = new();
         
         public string? DiscountCode { get; set; }
         
-        [Required]
+        [Required(ErrorMessage = "Phương thức giao hàng là bắt buộc")]
         public DeliveryMethod DeliveryMethod { get; set; }
         
-        [Required]
+        [Required(ErrorMessage = "Phương thức thanh toán là bắt buộc")]
         public PaymentMethod PaymentMethod { get; set; }
         
-        [Required]
-        [MaxLength(1000)]
+        [Required(ErrorMessage = "Địa chỉ giao hàng là bắt buộc")]
+        [StringLength(1000, ErrorMessage = "Địa chỉ không được vượt quá 1000 ký tự")]
         public string Address { get; set; } = null!;  // Địa chỉ giao hàng
         
-        [Required]
-        [MaxLength(100)]
+        [Required(ErrorMessage = "Tên người nhận là bắt buộc")]
+        [StringLength(100, ErrorMessage = "Tên người nhận không được vượt quá 100 ký tự")]
         public string DeliveryTo { get; set; } = null!;  // Tên người nhận
         
-        [Required]
-        [MaxLength(20)]
+        [Required(ErrorMessage = "Số điện thoại là bắt buộc")]
+        [StringLength(20, ErrorMessage = "Số điện thoại không được vượt quá 20 ký tự")]
+        [RegularExpression(@"^(0|\+84)[1-9][0-9]{8,9}$", ErrorMessage = "Số điện thoại không hợp lệ. Ví dụ: 0912345678 hoặc +84912345678")]
         public string PhoneNumber { get; set; } = null!;  // Số điện thoại người nhận
         
         // Allergy and Preference Notes
-        [MaxLength(500)]
+        [StringLength(500, ErrorMessage = "Ghi chú dị ứng không được vượt quá 500 ký tự")]
         public string? AllergyNote { get; set; }  // Ghi chú về dị ứng thực phẩm
         
-        [MaxLength(500)]
+        [StringLength(500, ErrorMessage = "Ghi chú sở thích không được vượt quá 500 ký tự")]
         public string? PreferenceNote { get; set; }  // Ghi chú về sở thích ăn uống
         
-        [Required]
+        [Required(ErrorMessage = "Ngày bắt đầu giao hàng là bắt buộc")]
         public DateTime DeliveryStartDate { get; set; }  // Ngày bắt đầu giao hàng (đơn hàng đầu tiên)
         
         /// <summary>

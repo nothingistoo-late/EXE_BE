@@ -3,6 +3,8 @@ using DTOs.OrderDTOs.Respond;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
+using BusinessObjects.Common;
+using System.Linq;
 
 namespace WebAPI.Controllers
 {
@@ -25,6 +27,22 @@ namespace WebAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request)
         {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Count > 0)
+                    .ToDictionary(
+                        kvp => kvp.Key,
+                        kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                    );
+                return BadRequest(new ApiResult<object>
+                {
+                    IsSuccess = false,
+                    Message = "Dữ liệu không hợp lệ",
+                    Data = errors
+                });
+            }
+
             var result = await _orderService.CreateOrderAsync(request);
             return result.IsSuccess ? Ok(result) : BadRequest(result);
         }
@@ -130,6 +148,22 @@ namespace WebAPI.Controllers
         [HttpPost("weekly")]
         public async Task<IActionResult> CreateWeeklyPackage([FromBody] CreateWeeklyPackageRequest request)
         {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Count > 0)
+                    .ToDictionary(
+                        kvp => kvp.Key,
+                        kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                    );
+                return BadRequest(new ApiResult<object>
+                {
+                    IsSuccess = false,
+                    Message = "Dữ liệu không hợp lệ",
+                    Data = errors
+                });
+            }
+
             var result = await _orderService.CreateWeeklyPackageAsync(request);
             return result.IsSuccess ? Ok(result) : BadRequest(result);
         }

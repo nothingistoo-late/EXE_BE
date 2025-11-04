@@ -64,6 +64,29 @@ namespace Services.Implementations
         {
             try
             {
+                // Validate required fields
+                if (string.IsNullOrWhiteSpace(request.Address))
+                {
+                    return ApiResult<GiftBoxOrderResponse>.Failure(new Exception("Địa chỉ giao hàng là bắt buộc"));
+                }
+
+                if (string.IsNullOrWhiteSpace(request.DeliveryTo))
+                {
+                    return ApiResult<GiftBoxOrderResponse>.Failure(new Exception("Tên người nhận là bắt buộc"));
+                }
+
+                if (string.IsNullOrWhiteSpace(request.PhoneNumber))
+                {
+                    return ApiResult<GiftBoxOrderResponse>.Failure(new Exception("Số điện thoại là bắt buộc"));
+                }
+
+                // Validate phone number format (Vietnamese phone number)
+                var phoneRegex = new System.Text.RegularExpressions.Regex(@"^(0|\+84)[1-9][0-9]{8,9}$");
+                if (!phoneRegex.IsMatch(request.PhoneNumber.Trim()))
+                {
+                    return ApiResult<GiftBoxOrderResponse>.Failure(new Exception("Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại theo định dạng: 0912345678 hoặc +84912345678"));
+                }
+
                 return await _unitOfWork.ExecuteTransactionAsync(async () =>
                 {
                     // 1. Validate user exists
@@ -85,9 +108,9 @@ namespace Services.Implementations
                         Status = OrderStatus.Pending,
                         DeliveryMethod = request.DeliveryMethod,
                         PaymentMethod = request.PaymentMethod,
-                        Address = request.Address,
-                        DeliveryTo = request.DeliveryTo,
-                        PhoneNumber = request.PhoneNumber,
+                        Address = request.Address.Trim(),
+                        DeliveryTo = request.DeliveryTo.Trim(),
+                        PhoneNumber = request.PhoneNumber.Trim(),
                         OrderDetails = new List<OrderDetail>(),
                         CreatedAt = _currentTime.GetVietnamTime(),
                         UpdatedAt = _currentTime.GetVietnamTime(),

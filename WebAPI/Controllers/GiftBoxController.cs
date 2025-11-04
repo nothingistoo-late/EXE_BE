@@ -4,6 +4,7 @@ using Services.Interfaces;
 using DTOs.GiftBoxDTOs.Request;
 using DTOs.GiftBoxDTOs.Response;
 using BusinessObjects.Common;
+using System.Linq;
 
 namespace WebAPI.Controllers
 {
@@ -69,7 +70,18 @@ namespace WebAPI.Controllers
             {
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(ModelState);
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Count > 0)
+                        .ToDictionary(
+                            kvp => kvp.Key,
+                            kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        );
+                    return BadRequest(new ApiResult<object>
+                    {
+                        IsSuccess = false,
+                        Message = "Dữ liệu không hợp lệ",
+                        Data = errors
+                    });
                 }
 
                 var result = await _giftBoxService.CreateGiftBoxOrderAsync(request);
