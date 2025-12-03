@@ -44,6 +44,7 @@ namespace WebAPI.Controllers
         /// <summary>
         /// Chat with AI
         /// </summary>
+        [AllowAnonymous]
         [HttpPost("chat")]
         public async Task<ActionResult<ChatResponseDTO>> Chat([FromBody] ChatRequest request, CancellationToken cancellationToken)
         {
