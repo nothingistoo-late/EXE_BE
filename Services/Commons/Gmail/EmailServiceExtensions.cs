@@ -13,7 +13,8 @@ namespace Services.Commons.Gmail
             services.AddTransient<IEmailQueueService, EmailQueueService>();
             services.AddTransient<SendEmailJob>();
             services.AddHostedService<EmailBackgroundService>();
-            services.AddHostedService<EmailReminderService>();
+            // Disable daily reminder job to prevent automatic email sending
+            // services.AddHostedService<EmailReminderService>();
             services.AddQuartz(q => { });
             services.AddQuartzHostedService(options =>
             {

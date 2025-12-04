@@ -37,7 +37,7 @@ namespace WebAPI.Extensions
             services.AddCors(opt =>
             {
                 opt.AddPolicy("CorsPolicy", b => b
-                    .WithOrigins("https://www.vegie.site", "https://vegie.site", "http://localhost:5173", "http://localhost:3000")
+                    .WithOrigins("https://www.vegie.site", "https://vegie.site", "http://localhost:5173", "http://localhost:3000", "https://presentation-ashy-seven.vercel.app/")
                     .AllowAnyMethod()
                     .AllowAnyHeader()
                     .AllowCredentials()

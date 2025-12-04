@@ -82,7 +82,7 @@ namespace Repositories
                         Name = "Blind Box",
                         Description = "Random mystery box with surprise items",
                         ParentID = Guid.Empty,
-                        Price = 150000 // 150k
+                        Price = 70000 // cập nhật giá blind box
                     },
                     new BoxTypes
                     {
